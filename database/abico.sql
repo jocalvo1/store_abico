@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 31, 2025 at 05:22 PM
+-- Generation Time: Aug 01, 2025 at 03:05 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -275,6 +275,21 @@ CREATE TABLE `suppliers` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `suppliers`
+--
+
+INSERT INTO `suppliers` (`id`, `name`, `contact_person`, `contact_number`, `email`, `address`, `created_at`, `updated_at`) VALUES
+(1, 'Falcor Marketing', '', '', '', 'Sagay City', '2025-08-01 10:24:40', '2025-08-01 12:23:06'),
+(2, 'Philphost', '', '', '', '', '2025-08-01 12:01:39', '2025-08-01 12:01:39'),
+(3, 'Hari Marketing', '', '', '', '', '2025-08-01 12:31:10', '2025-08-01 12:31:25'),
+(4, 'UHI', '', '', '', '', '2025-08-01 12:32:09', '2025-08-01 12:32:09'),
+(5, 'Atlas', '', '', '', '', '2025-08-01 12:32:20', '2025-08-01 12:32:38'),
+(6, 'Mandalagan Commodities, Inc.', '', '', '', '', '2025-08-01 12:32:52', '2025-08-01 12:32:59'),
+(7, 'Solane', '', '', '', '', '2025-08-01 12:33:18', '2025-08-01 12:33:18'),
+(8, 'Town Gaz', '', '', '', '', '2025-08-01 12:33:25', '2025-08-01 12:33:25'),
+(9, 'Pryce Gas', '', '', '', '', '2025-08-01 12:33:30', '2025-08-01 12:33:37');
+
 -- --------------------------------------------------------
 
 --
@@ -293,16 +308,15 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Indexes for dumped tables
---
---
 -- Dumping data for table `users`
 --
--- Password is hashed version of 'admin' using PHP's password_hash()
--- You can log in with username: admin, password: admin
--- The system will automatically verify the password against this hash
+
 INSERT INTO `users` (`id`, `name`, `username`, `password`, `role`, `contact`, `created_at`, `updated_at`) VALUES
-(1, 'Administrator', 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', '', '2025-07-31 15:03:31', '2025-07-31 15:03:31');
+(1, 'Administrator', 'admin', '$2y$10$sTqqa5woDdDeKSP54w8.WOrYcHIAScubOHaHkO5PKznuQr7ax562.', 'admin', '', '2025-07-31 22:03:31', '2025-08-01 02:40:52');
+
+--
+-- Indexes for dumped tables
+--
 
 --
 -- Indexes for table `check_exchanges`
@@ -505,13 +519,13 @@ ALTER TABLE `stock_movements`
 -- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables
