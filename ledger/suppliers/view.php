@@ -42,20 +42,6 @@ $stmt->close();
 $purchases = [];
 $conn->close();
 
-// Handle delete action
-if (isset($_GET['delete']) && $_GET['delete'] == $supplier_id) {
-    require_once __DIR__ . '/../../controller/supplier/SupplierController.php';
-    $supplierController = new SupplierController();
-    
-    if ($supplierController->delete($supplier_id)) {
-        $_SESSION['success'] = "Supplier deleted successfully!";
-        header("Location: index.php");
-        exit();
-    } else {
-        $errors[] = "Error deleting supplier. Please try again.";
-    }
-}
-
 // Include header
 require_once __DIR__ . '/../../templates/header.php';
 ?>
@@ -67,10 +53,7 @@ require_once __DIR__ . '/../../templates/header.php';
             <small class="text-muted">Supplier Details</small>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="#" class="btn btn-sm btn-outline-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                <i class="fas fa-trash"></i> Delete
-            </a>
-            <a href="index.php" class="btn btn-sm btn-outline-secondary">
+<a href="index.php" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Suppliers
             </a>
         </div>
@@ -191,41 +174,8 @@ require_once __DIR__ . '/../../templates/header.php';
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this supplier? This action cannot be undone.</p>
-                <p class="mb-0"><strong>Supplier:</strong> <?php echo htmlspecialchars($supplier['name']); ?></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="view.php?delete=<?php echo $supplier_id; ?>" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Delete
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
 
-<script>
-// Add confirmation for delete action
-document.addEventListener('DOMContentLoaded', function() {
-    const deleteButtons = document.querySelectorAll('.delete-supplier');
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (!confirm('Are you sure you want to delete this supplier? This action cannot be undone.')) {
-                e.preventDefault();
-            }
-        });
-    });
-});
-</script>
+
     
 <?php 
 // Include footer

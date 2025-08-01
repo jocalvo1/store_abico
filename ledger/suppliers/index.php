@@ -39,110 +39,124 @@ if (is_object($suppliers) && method_exists($suppliers, 'fetch')) {
 $rowNumber = 1;
 ?>
 
-<div class="container-fluid px-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h1 class="h4 mb-0 text-gray-800">Suppliers</h1>
-        <div class="d-flex gap-2">
-            <div class="input-group input-group-sm" style="width: 200px;">
-                <input type="text" class="form-control form-control-sm" placeholder="Search..." id="searchInput">
-                <button class="btn btn-outline-secondary btn-sm" type="button" id="searchButton">
-                    <i class="fas fa-search"></i>
-                </button>
-            </div>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
+        <div class="row">
+            <h1 class="h3 mb-0 mt-2">Suppliers</h1>
+        </div>
+        <div class="d-flex align-items-center">
+            <form action="" method="get" class="me-3 min-width-300px">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" 
+                           class="form-control form-control-sm border-start-0 ps-0" 
+                           name="search" 
+                           placeholder="Search suppliers..." 
+                           value="<?php echo htmlspecialchars($searchTerm); ?>"
+                           aria-label="Search suppliers">
+                    <?php if (!empty($searchTerm)): ?>
+                        <a href="index.php" class="btn btn-sm btn-outline-danger border-start-0" title="Clear search">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </form>
             <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
-                <i class="fas fa-plus me-1"></i>Add New
+                <i class="fas fa-plus me-1"></i> Add New
             </a>
         </div>
     </div>
 
-    <!-- Search and Add Card -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Suppliers List</h6>
+    <div class="card border-0 shadow-sm" data-aos="fade-up" data-aos-delay="100">
+        <div class="card-header bg-white border-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Suppliers</h6>
+                <div class="text-muted small">
+                    <?php echo count($suppliersArray); ?> of <?php echo count($suppliersArray); ?> total
+                </div>
+            </div>
         </div>
         
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="suppliersTable">
-                    <colgroup>
-                        <col style="width: 5%;">
-                        <col style="width: 20%;">
-                        <col style="width: 15%;">
-                        <col style="width: 15%;">
-                        <col style="width: 25%;">
-                        <col style="width: 10%;">
-                        <col style="width: 10%;">
-                    </colgroup>
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Supplier</th>
-                            <th>Contact Person</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Total Purchases</th>
-                            <th class="text-nowrap text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($suppliersArray)): ?>
-                            <?php foreach ($suppliersArray as $supplier): ?>
-                                <tr>
-                                    <td><?php echo $rowNumber++; ?></td>
-                                    <td><?php echo htmlspecialchars($supplier['name']); ?></td>
-                                    <td><?php echo !empty($supplier['contact_person']) ? htmlspecialchars($supplier['contact_person']) : 'N/A'; ?></td>
-                                    <td><?php echo !empty($supplier['contact_number']) ? htmlspecialchars($supplier['contact_number']) : 'N/A'; ?></td>
-                                    <td><?php echo !empty($supplier['email']) ? htmlspecialchars($supplier['email']) : 'N/A'; ?></td>
-                                    <td>₱0.00</td> <!-- Placeholder for total purchases -->
-                                    <td class="text-nowrap">
-                                        <div class="d-flex gap-1">
-                                            <a href="view.php?id=<?php echo $supplier['id']; ?>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" title="View">
-                                                <i class="fas fa-eye"></i> <span class="d-none d-sm-inline">View</span>
-                                            </a>
-                                            <a href="edit.php?id=<?php echo $supplier['id']; ?>" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Edit">
-                                                <i class="fas fa-edit"></i> <span class="d-none d-sm-inline">Edit</span>
-                                            </a>
-                                            <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 delete-supplier" data-id="<?php echo $supplier['id']; ?>" title="Delete">
-                                                <i class="fas fa-trash"></i> <span class="d-none d-sm-inline">Delete</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
+        <div class="card-body p-0">
+            <?php if (empty($suppliersArray)): ?>
+                <div class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-building fa-3x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">No suppliers found</h5>
+                    <p class="text-muted mb-4">
+                        Get started by adding a new supplier
+                    </p>
+                    <a href="add.php" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i> Add New Supplier
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
                             <tr>
-                                <td colspan="7" class="text-center py-4">No suppliers found. <a href="add.php">Add a new supplier</a> to get started.</td>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold">Supplier</th>
+                                <th class="text-uppercase text-muted small fw-bold">Contact Person</th>
+                                <th class="text-uppercase text-muted small fw-bold">Phone</th>
+                                <th class="text-uppercase text-muted small fw-bold">Email</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end">Total Purchases</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
                             </tr>
-                        <?php endif; ?>
+                        </thead>
+                    <tbody>
+                        <?php foreach ($suppliersArray as $index => $supplier): ?>
+                            <tr class="border-top" data-aos="fade-up" data-aos-delay="<?php echo ($index % 10) * 50; ?>">
+                                <td class="text-center text-muted"><?php echo $index + 1; ?></td>
+                                <td class="py-3">
+                                    <a href="view.php?id=<?php echo $supplier['id']; ?>" class="text-decoration-none fw-medium">
+                                        <?php echo htmlspecialchars($supplier['name']); ?>
+                                    </a>
+                                </td>
+                                <td class="text-muted">
+                                    <?php echo !empty($supplier['contact_person']) ? htmlspecialchars($supplier['contact_person']) : '<span class="text-muted">N/A</span>'; ?>
+                                </td>
+                                <td class="text-muted">
+                                    <?php echo !empty($supplier['contact_number']) ? htmlspecialchars($supplier['contact_number']) : '<span class="text-muted">N/A</span>'; ?>
+                                </td>
+                                <td class="text-muted">
+                                    <?php if (!empty($supplier['email'])): ?>
+                                        <a href="mailto:<?php echo htmlspecialchars($supplier['email']); ?>" class="text-decoration-none">
+                                            <?php echo htmlspecialchars($supplier['email']); ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-muted">N/A</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end fw-medium">
+                                    ₱0.00
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <a href="view.php?id=<?php echo $supplier['id']; ?>" 
+                                           class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 
+                                           title="View Details" data-bs-toggle="tooltip" data-bs-placement="top">
+                                            <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                        </a>
+                                        <a href="edit.php?id=<?php echo $supplier['id']; ?>" 
+                                           class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center gap-1" 
+                                           title="Edit Supplier" data-bs-toggle="tooltip" data-bs-placement="top">
+                                            <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
-            </div>
+            <?php endif; ?>
+        </div>
         </div>
     </div>
 </div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this supplier? This action cannot be undone.</p>
-                <p class="mb-0"><strong>Supplier:</strong> <?php echo htmlspecialchars($supplier['name']); ?></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="index.php?delete=<?php echo $supplier_id; ?>" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Delete
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Search functionality
@@ -172,49 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.key === 'Enter') {
             event.preventDefault();
             performSearch();
-        }
-    });
-
-    // Delete confirmation
-    const deleteButtons = document.querySelectorAll('.delete-supplier');
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    let supplierToDelete = null;
-
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            supplierToDelete = this.getAttribute('data-id');
-            deleteModal.show();
-        });
-    });
-
-    document.getElementById('confirmDelete').addEventListener('click', function() {
-        if (supplierToDelete) {
-            // Make an AJAX call to delete the supplier
-            fetch(`delete.php?id=${supplierToDelete}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Remove the row from the table
-                    const row = document.querySelector(`.delete-supplier[data-id="${supplierToDelete}"]`).closest('tr');
-                    row.remove();
-                    // Show success message
-                    showAlert('Supplier deleted successfully', 'success');
-                } else {
-                    showAlert(data.message || 'Error deleting supplier', 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('An error occurred while deleting the supplier', 'danger');
-            })
-            .finally(() => {
-                deleteModal.hide();
-            });
         }
     });
 
