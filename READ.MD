@@ -1,5 +1,3 @@
-I'm here
-
 Create a Ledger first with tabs of: 
  1. Customers /
    - id
