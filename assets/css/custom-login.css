@@ -1,0 +1,203 @@
+:root {
+    --primary-color: #4361ee;
+    --primary-hover: #3a56d4;
+    --secondary-color: #4cc9f0;
+    --text-color: #2b2d42;
+    --light-gray: #f8f9fa;
+    --border-radius: 12px;
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text-color);
+}
+.login-container {
+    max-width: 420px;
+    width: 100%;
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    border: none;
+}
+
+.card-header h4 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+}
+
+.card-body {
+    padding: 2.5rem;
+    background: white;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.form-control {
+    padding: 0.75rem 1rem 0.75rem 45px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    transition: var(--transition);
+    height: 48px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+}
+
+.input-group-text {
+    background: transparent;
+    border-right: none;
+}
+
+.input-group .form-control {
+    border-left: 1px solid #dee2e6;
+}
+
+.btn-login {
+    background: var(--primary-color);
+    border: none;
+    padding: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-login:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}
+
+.btn-login .spinner-border {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.5rem;
+    display: none;
+}
+
+.btn-login.loading .spinner-border {
+    display: inline-block;
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.form-footer a {
+    color: var(--primary-color);
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.form-footer a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.input-group > .input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    z-index: 10;
+    transition: var(--transition);
+    pointer-events: none;
+}
+
+.input-group > .form-control {
+    width: 100%;
+    position: relative;
+}
+
+.form-control.with-icon {
+    padding-left: 45px !important;
+    border-left: 1px solid #dee2e6 !important;
+}
+
+/* Error state styling */
+.form-control.is-invalid {
+    margin-bottom: 1.5rem;
+}
+
+.invalid-feedback {
+    position: absolute;
+    bottom: -1.25rem;
+    left: 0;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+/* Adjust icon position when there's an error */
+.input-group:has(.is-invalid) > .input-icon {
+    top: 24px; /* Adjust this value based on your input height */
+}
+
+.form-control:focus, .form-control.with-icon:focus {
+    border-color: var(--primary-color) !important;
+}
