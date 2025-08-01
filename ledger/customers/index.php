@@ -10,17 +10,184 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Include header
+// Include required files
 require_once __DIR__ . '/../../templates/header.php';
+require_once __DIR__ . '/../../includes/database.php';
+
+// Initialize database connection
+$conn = getDBConnection();
+
+// Handle search
+$searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+// Build query based on search
+if (!empty($searchTerm)) {
+    $search = "%$searchTerm%";
+    $stmt = $conn->prepare("SELECT * FROM customers WHERE name LIKE ? OR contact LIKE ? OR address LIKE ?");
+    $stmt->bind_param("sss", $search, $search, $search);
+} else {
+    $stmt = $conn->prepare("SELECT * FROM customers");
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+$customers = $result->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+$conn->close();
+
+// Get row count for numbering
+$rowNumber = 1;
 ?>
 
-<div class="container-fluid">
-    <div class="row">
+<div class="container-fluid px-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h1 class="h4 mb-0 text-gray-800">Customers</h1>
+        <div class="d-flex gap-2">
+            <div class="input-group input-group-sm" style="width: 200px;">
+                <input type="text" class="form-control form-control-sm" placeholder="Search..." id="searchInput" value="<?php echo htmlspecialchars($searchTerm); ?>">
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="searchButton">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
+                <i class="fas fa-plus me-1"></i>Add New
+            </a>
+        </div>
+    </div>
 
+    <!-- Search and Add Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Customers List</h6>
+        </div>
+        
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="customersTable">
+                    <colgroup>
+                        <col style="width: 10%;">
+                        <col style="width: 30%;">
+                        <col style="width: 30%;">
+                        <col style="width: 20%;">
+                        <col style="width: 10%;">
+                    </colgroup>
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Contact</th>
+                            <th>Address</th>
+                            <th class="text-nowrap text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($customers)): ?>
+                            <?php foreach ($customers as $customer): ?>
+                                <tr>
+                                    <td><?php echo $rowNumber++; ?></td>
+                                    <td><?php echo htmlspecialchars($customer['name']); ?></td>
+                                    <td><?php echo !empty($customer['contact']) ? htmlspecialchars($customer['contact']) : 'N/A'; ?></td>
+                                    <td><?php echo !empty($customer['address']) ? htmlspecialchars($customer['address']) : 'N/A'; ?></td>
+                                    <td class="text-nowrap">
+                                        <div class="d-flex gap-1">
+                                            <a href="view.php?id=<?php echo $customer['id']; ?>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" title="View">
+                                                <i class="fas fa-eye"></i> <span class="d-none d-sm-inline">View</span>
+                                            </a>
+                                            <a href="edit.php?id=<?php echo $customer['id']; ?>" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Edit">
+                                                <i class="fas fa-edit"></i> <span class="d-none d-sm-inline">Edit</span>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 delete-customer" data-id="<?php echo $customer['id']; ?>" data-name="<?php echo htmlspecialchars($customer['name']); ?>" title="Delete">
+                                                <i class="fas fa-trash"></i> <span class="d-none d-sm-inline">Delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="5" class="text-center py-4">No customers found. <a href="add.php">Add a new customer</a> to get started.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
-<?php 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this customer? This action cannot be undone.</p>
+                <p class="mb-0"><strong>Customer:</strong> <span id="customerName"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="#" class="btn btn-danger" id="confirmDelete">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchForm = document.createElement('form');
+    searchForm.method = 'get';
+    searchForm.style.display = 'none';
+    searchForm.innerHTML = '<input type="hidden" name="search" id="searchValue">';
+    document.body.appendChild(searchForm);
+
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+    
+    function performSearch() {
+        document.getElementById('searchValue').value = searchInput.value.trim();
+        searchForm.submit();
+    }
+
+    searchButton.addEventListener('click', performSearch);
+    searchInput.addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            performSearch();
+        }
+    });
+
+    // Delete confirmation
+    const deleteButtons = document.querySelectorAll('.delete-customer');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const customerNameSpan = document.getElementById('customerName');
+    let customerToDelete = null;
+    let deleteUrl = '';
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            customerToDelete = this.getAttribute('data-id');
+            customerNameSpan.textContent = this.getAttribute('data-name');
+            deleteUrl = `delete.php?id=${customerToDelete}`;
+            deleteModal.show();
+        });
+    });
+
+    document.getElementById('confirmDelete').addEventListener('click', function(e) {
+        e.preventDefault();
+        if (customerToDelete) {
+            window.location.href = deleteUrl;
+        }
+    });
+});
+</script>
+
+<?php
 // Include footer
-require_once __DIR__ . '/../../templates/footer.php'; 
+require_once __DIR__ . '/../../templates/footer.php';
 ?>
