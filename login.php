@@ -2,6 +2,12 @@
 // Start session
 session_start();
 
+// Redirect if already logged in
+if (isset($_SESSION['user_id'])) {
+    header('Location: index.php');
+    exit();
+}
+
 // Check for login errors
 $loginErrors = $_SESSION['login_errors'] ?? [];
 $loginUsername = $_SESSION['login_username'] ?? '';
