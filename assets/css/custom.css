@@ -1,0 +1,184 @@
+:root {
+    --primary-color: #4e73df;
+    --secondary-color: #f8f9fc;
+    --accent-color: #36b9cc;
+    --text-dark: #5a5c69;
+    --shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    --danger-color: #dc3545;
+}
+
+/* Navbar Styles */
+.navbar {
+    padding: 0.5rem 1rem;
+    box-shadow: var(--shadow);
+    background: #fff !important;
+    border-bottom: 1px solid #e3e6f0;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--primary-color) !important;
+    padding: 0.5rem 1rem;
+}
+
+.nav-link {
+    font-weight: 500;
+    color: var(--text-dark) !important;
+    padding: 0.75rem 1rem !important;
+    margin: 0 0.25rem;
+    border-radius: 0.35rem;
+    transition: all 0.2s;
+}
+
+.nav-link:hover, 
+.nav-link:focus {
+    background-color: rgba(78, 115, 223, 0.1);
+    color: var(--primary-color) !important;
+}
+
+.nav-link i {
+    width: 1.2rem;
+    text-align: center;
+    margin-right: 0.5rem;
+}
+
+/* Dropdown Styles */
+.dropdown-menu {
+    border: none;
+    box-shadow: var(--shadow);
+    border-radius: 0.35rem;
+    padding: 0.5rem 0;
+    margin-top: 0.5rem;
+    border: 1px solid #e3e6f0;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.85rem;
+    color: var(--text-dark);
+}
+
+.dropdown-item i {
+    width: 1.2rem;
+    text-align: center;
+    margin-right: 0.5rem;
+    color: #b7b9cc;
+}
+
+.dropdown-item:hover, 
+.dropdown-item:focus {
+    background-color: rgba(78, 115, 223, 0.1);
+    color: var(--primary-color);
+}
+
+.dropdown-item:hover i, 
+.dropdown-item:focus i {
+    color: var(--primary-color);
+}
+
+.navbar-toggler {
+    border: none;
+    padding: 0.5rem;
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.nav-link.active {
+    color: var(--primary-color) !important;
+    font-weight: 600 !important;
+    background-color: rgba(78, 115, 223, 0.1);
+}
+
+/* Dropdown Caret */
+.dropdown-toggle::after {
+    display: inline-block !important;
+    margin-left: 0.5em;
+    vertical-align: middle;
+    content: "\f107";
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    border: none;
+    transition: transform 0.2s ease;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+/* Remove caret from cog dropdown */
+.navbar-nav .user-dropdown .dropdown-toggle::after {
+    display: none !important;
+}
+
+.dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+}
+
+/* Danger Items */
+.dropdown-item.text-danger {
+    color: var(--danger-color) !important;
+    transition: all 0.2s;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.dropdown-item.text-danger:hover i {
+    color: var(--danger-color) !important;
+}
+
+/* Responsive Styles */
+@media (max-width: 991.98px) {
+    .navbar-collapse {
+        padding: 1rem;
+        background: white;
+        border-radius: 0.35rem;
+        box-shadow: var(--shadow);
+        margin-top: 0.5rem;
+    }
+    
+    .nav-item {
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* Custom Dropdown Toggle */
+.navbar-nav .dropdown-menu {
+    margin-top: 0.5rem;
+    border: 1px solid rgba(0,0,0,.05);
+}
+
+/* User Dropdown */
+.navbar-nav .user-dropdown .dropdown-toggle::after {
+    display: inline-block !important;
+    margin-left: 0.5em;
+    vertical-align: middle;
+}
+
+/* Cog Dropdown Caret */
+.navbar-nav .dropdown-toggle .fa-caret-down {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-left: 0.25rem;
+}
+
+/* Dropdown Menu Styling */
+.dropdown-item.text-danger {
+    color: #dc3545 !important;
+    transition: all 0.2s;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.dropdown-item.text-danger:hover i {
+    color: #dc3545 !important;
+}
+
+.navbar-nav .dropdown-menu {
+    margin-top: 0.5rem;
+    border: 1px solid rgba(0,0,0,.05);
+}
