@@ -50,7 +50,7 @@ require_once __DIR__ . '/../../templates/header.php';
             <small class="text-muted">Customer Details</small>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="edit.php?id=<?php echo $customer_id; ?>" class="btn btn-sm btn-outline-primary me-2">
+            <a href="edit.php?id=<?php echo $customer_id; ?>" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-edit"></i> Edit
             </a>
             <a href="index.php" class="btn btn-sm btn-outline-secondary">
@@ -93,19 +93,12 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
         
         <div class="col-md-4">
-            <div class="card mb-4">
+            <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Quick Actions</h6>
+                    <h6 class="mb-0">Recent Orders</h6>
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="edit.php?id=<?php echo $customer_id; ?>" class="btn btn-primary">
-                            <i class="fas fa-edit me-1"></i> Edit Customer
-                        </a>
-                        <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                            <i class="fas fa-trash me-1"></i> Delete Customer
-                        </button>
-                    </div>
+                    <p class="text-muted">No orders have been placed.</p>
                 </div>
             </div>
         </div>

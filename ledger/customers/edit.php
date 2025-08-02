@@ -1,16 +1,85 @@
 <?php
-// This file is included by the CustomerController
-// $customer and $errors variables are available from the controller
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../../login.php');
+    exit();
+}
+
+// Include required files
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../templates/header.php';
+// Initialize variables
+$errors = [];
+$success = '';
+$customer = [];
+
+// Check if ID is provided
+if (!isset($_GET['id'])) {
+    $_SESSION['error'] = "No customer ID provided.";
+    header("Location: index.php");
+    exit();
+}
+
+$customer_id = intval($_GET['id']);
+$conn = getDBConnection();
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Sanitize and validate input
+    $name = trim($_POST['name'] ?? '');
+    $contact = trim($_POST['contact'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    
+    // Validate inputs
+    // All fields are optional now
+    // If no errors, proceed with database update
+    if (empty($errors)) {
+        $stmt = $conn->prepare("UPDATE customers SET name = ?, contact = ?, address = ? WHERE id = ?");
+        $stmt->bind_param("sssi", $name, $contact, $address, $customer_id);
+        
+        if ($stmt->execute()) {
+            $_SESSION['success'] = 'Customer updated successfully!';
+            header("Location: view.php?id=" . $customer_id);
+            exit();
+        } else {
+            $errors[] = 'Error updating customer. Please try again.';
+        }
+        $stmt->close();
+    }
+}
+
+// Fetch customer details
+$stmt = $conn->prepare("SELECT * FROM customers WHERE id = ?");
+$stmt->bind_param("i", $customer_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    $_SESSION['error'] = "Customer not found.";
+    header("Location: index.php");
+    exit();
+}
+
+$customer = $result->fetch_assoc();
+$stmt->close();
+$conn->close();
+
+// Include header after all processing is done
 ?>
 
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">Edit Customer</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="customers.php?action=view&id=<?php echo $customer['id']; ?>" class="btn btn-sm btn-outline-secondary me-2">
+            <a href="view.php?id=<?php echo $customer['id']; ?>" class="btn btn-sm btn-outline-secondary me-2">
                 <i class="fas fa-arrow-left"></i> Back to View
             </a>
-            <a href="customers.php" class="btn btn-sm btn-outline-secondary">
+            <a href="index.php" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-list"></i> View All Customers
             </a>
         </div>
@@ -33,32 +102,31 @@
                         </div>
                     <?php endif; ?>
 
-                    <form method="POST" action="customers.php?action=edit&id=<?php echo $customer['id']; ?>" id="customerForm">
-                        <input type="hidden" name="_method" value="PUT">
-                        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                        
+                    <form method="POST" action="edit.php?id=<?php echo $customer['id']; ?>" id="customerForm"> 
                         <div class="mb-3">
-                            <label for="name" class="form-label">Customer Name <span class="text-danger">*</span></label>
+                            <label for="name" class="form-label">Customer Name</label>
                             <input type="text" class="form-control" id="name" name="name" 
-                                   value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : htmlspecialchars($customer['name']); ?>" required>
+                                   placeholder="Enter customer name"
+                                   value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : htmlspecialchars($customer['name']); ?>">
                         </div>
                         
                         <div class="mb-3">
-                            <label for="contact" class="form-label">Contact Information <span class="text-danger">*</span></label>
+                            <label for="contact" class="form-label">Contact Information</label>
                             <input type="text" class="form-control" id="contact" name="contact" 
-                                   value="<?php echo isset($_POST['contact']) ? htmlspecialchars($_POST['contact']) : htmlspecialchars($customer['contact']); ?>" required>
-                            <div class="form-text">Phone number or email address</div>
+                                   placeholder="e.g., phone number or email"
+                                   value="<?php echo isset($_POST['contact']) ? htmlspecialchars($_POST['contact']) : htmlspecialchars($customer['contact']); ?>">
                         </div>
                         
                         <div class="mb-3">
                             <label for="address" class="form-label">Address</label>
-                            <textarea class="form-control" id="address" name="address" rows="3"><?php 
+                            <textarea class="form-control" id="address" name="address" rows="3"
+                                      placeholder="Enter full address"><?php 
                                 echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : htmlspecialchars($customer['address']); 
                             ?></textarea>
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="customers.php?action=view&id=<?php echo $customer['id']; ?>" class="btn btn-secondary me-md-2">Cancel</a>
+                            <a href="view.php?id=<?php echo $customer['id']; ?>" class="btn btn-secondary me-md-2">Cancel</a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-1"></i> Update Customer
                             </button>
@@ -66,73 +134,11 @@
                     </form>
                 </div>
             </div>
-            
-            <div class="card mt-4">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">Danger Zone</h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">Delete this customer</h6>
-                            <p class="mb-0 text-muted">Once deleted, this action cannot be undone.</p>
-                        </div>
-                        <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                            <i class="fas fa-trash me-1"></i> Delete Customer
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this customer? This action cannot be undone.</p>
-                <p class="mb-0"><strong>Customer:</strong> <?php echo htmlspecialchars($customer['name']); ?></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="customers.php?action=delete&id=<?php echo $customer['id']; ?>" class="btn btn-danger" id="confirmDelete">
-                    <i class="fas fa-trash"></i> Delete
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Form validation
-    const form = document.getElementById('customerForm');
-    
-    form.addEventListener('submit', function(event) {
-        let isValid = true;
-        const requiredFields = form.querySelectorAll('[required]');
-        
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                isValid = false;
-                field.classList.add('is-invalid');
-            } else {
-                field.classList.remove('is-invalid');
-            }
-        });
-        
-        if (!isValid) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        
-        form.classList.add('was-validated');
-    });
-});
-</script>
+<?php
+// Include footer
+require_once __DIR__ . '/../../templates/footer.php';
+?>

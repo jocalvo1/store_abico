@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/../../../includes/database.php';
+require_once __DIR__ . '/../../includes/database.php';
 
-class CustomerController {
+class customerController {
     private $conn;
 
     public function __construct() {
