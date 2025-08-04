@@ -50,7 +50,7 @@ require_once __DIR__ . '/../../templates/header.php';
             <small class="text-muted">Customer Details</small>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="edit.php?id=<?php echo $customer_id; ?>" class="btn btn-sm btn-outline-success me-2">
+            <a href="edit.php?id=<?php echo $customer_id; ?>" class="btn btn-sm btn-outline-secondary me-2">
                 <i class="fas fa-edit"></i> Edit
             </a>
             <a href="index.php" class="btn btn-sm btn-outline-secondary">
@@ -60,39 +60,90 @@ require_once __DIR__ . '/../../templates/header.php';
     </div>
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <div class="card mb-4">
                 <div class="card-header">
                     <h6 class="mb-0">Customer Information</h6>
                 </div>
-                <div class="card-body">
-                    <div class="row">
+                <div class="card-body p-0">
+                    <div class="row g-4 p-3">
+                        <!-- Contact & Address Column -->
                         <div class="col-md-6">
-                            <h6>Contact Details</h6>
-                            <dl class="mb-0">
-                                <dt>Contact</dt>
-                                <dd><?php echo !empty($customer['contact']) ? htmlspecialchars($customer['contact']) : '<span class="text-muted">N/A</span>'; ?></dd>
-                                
-                                <dt class="mt-3">Address</dt>
-                                <dd><?php echo !empty($customer['address']) ? nl2br(htmlspecialchars($customer['address'])) : '<span class="text-muted">N/A</span>'; ?></dd>
-                            </dl>
+                            <div class="p-3 bg-light rounded-3 h-100">
+                                <h5 class="mb-3 border-bottom pb-2"><i class="fas fa-address-card me-2"></i>Contact Information</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-phone fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Phone</h6>
+                                                <p class="mb-0">
+                                                    <?php if (!empty($customer['contact'])): ?>
+                                                        <a href="tel:<?php echo htmlspecialchars($customer['contact']); ?>" class="text-decoration-none">
+                                                            <?php echo htmlspecialchars($customer['contact']); ?>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">No contact information added</span>
+                                                    <?php endif; ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-map-marker-alt fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Address</h6>
+                                                <p class="mb-0">
+                                                    <?php echo !empty($customer['address']) ? nl2br(htmlspecialchars($customer['address'])) : '<span class="text-muted">No address provided</span>'; ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        
+                        <!-- Additional Details Column -->
                         <div class="col-md-6">
-                            <h6>Additional Information</h6>
-                            <dl class="mb-0">
-                                <dt>Customer Since</dt>
-                                <dd><?php echo date('F j, Y', strtotime($customer['created_at'])); ?></dd>
-                                
-                                <dt class="mt-3">Last Updated</dt>
-                                <dd><?php echo date('F j, Y h:i A', strtotime($customer['updated_at'])); ?></dd>
-                            </dl>
+                            <div class="p-3 bg-light rounded-3 h-100">
+                                <h5 class="mb-3 border-bottom pb-2"><i class="fas fa-info-circle me-2"></i>Additional Details</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-calendar-day fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Customer Since</h6>
+                                                <p class="mb-0"><?php echo date('F j, Y', strtotime($customer['created_at'])); ?></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-sync-alt fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Last Updated</h6>
+                                                <p class="mb-0"><?php echo date('F j, Y h:i A', strtotime($customer['updated_at'])); ?></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0">Recent Orders</h6>
@@ -104,29 +155,6 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 </div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this customer? This action cannot be undone.</p>
-                <p class="mb-0"><strong>Customer:</strong> <?php echo htmlspecialchars($customer['name']); ?></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="delete.php?id=<?php echo $customer_id; ?>" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Delete
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
 <?php
 // Include footer
 require_once __DIR__ . '/../../templates/footer.php';

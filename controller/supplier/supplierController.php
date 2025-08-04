@@ -145,22 +145,6 @@ class SupplierController {
         return $result;
     }
 
-    // Delete supplier
-    public function delete($id) {
-        $query = 'DELETE FROM ' . $this->table . ' WHERE id = ?';
-        $stmt = $this->conn->prepare($query);
-        if ($stmt === false) {
-            error_log("Prepare failed: " . $this->conn->error);
-            return false;
-        }
-        $stmt->bind_param('i', $id);
-        $result = $stmt->execute();
-        if (!$result) {
-            error_log("Delete failed: " . $stmt->error);
-        }
-        return $result;
-    }
-
     // Search suppliers
     public function search($searchTerm) {
         $query = 'SELECT * FROM ' . $this->table . ' 

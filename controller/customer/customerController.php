@@ -33,12 +33,6 @@ class customerController {
         return $stmt->execute();
     }
 
-    public function delete($id) {
-        $stmt = $this->conn->prepare("DELETE FROM customers WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
-    }
-
     public function search($term) {
         $search = "%$term%";
         $stmt = $this->conn->prepare("SELECT * FROM customers WHERE name LIKE ? OR contact LIKE ? OR address LIKE ? ORDER BY name ASC");

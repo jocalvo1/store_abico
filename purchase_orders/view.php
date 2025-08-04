@@ -50,13 +50,19 @@ if ($result->num_rows === 0) {
 $purchase = $result->fetch_assoc();
 $stmt->close();
 
-// Fetch purchase items
+// Fetch purchase items with received quantities
 $items = [];
 $stmt = $conn->prepare("
-    SELECT pi.*, i.name as item_name, i.unit
+    SELECT 
+        pi.*, 
+        i.name as item_name, 
+        i.unit,
+        COALESCE(SUM(di.received_quantity), 0) as total_received
     FROM purchase_order_items pi
     JOIN items i ON pi.item_id = i.id
+    LEFT JOIN delivery_items di ON pi.id = di.purchase_order_item_id
     WHERE pi.purchase_order_id = ?
+    GROUP BY pi.id
 ");
 $stmt->bind_param("i", $purchase_id);
 $stmt->execute();
@@ -64,6 +70,50 @@ $items_result = $stmt->get_result();
 
 if ($items_result) {
     $items = $items_result->fetch_all(MYSQLI_ASSOC);
+    
+    // Check if all items are fully received (received quantity exactly equals ordered quantity)
+    $all_items_received = true;
+    $any_items_received = false;
+    
+    foreach ($items as $item) {
+        $received = (int)$item['total_received'];
+        $ordered = (int)$item['quantity'];
+        
+        if ($received > 0) {
+            $any_items_received = true;
+        }
+        
+        if ($received !== $ordered) {
+            $all_items_received = false;
+        }
+    }
+    
+    // Update purchase status if needed
+    if ($all_items_received && $any_items_received) {
+        if ($purchase['status'] !== 'completed') {
+            $updateStmt = $conn->prepare("UPDATE purchase_orders SET status = 'completed' WHERE id = ?");
+            $updateStmt->bind_param("i", $purchase_id);
+            $updateStmt->execute();
+            $updateStmt->close();
+            $purchase['status'] = 'completed';
+        }
+    } elseif ($any_items_received) {
+        if ($purchase['status'] !== 'partial') {
+            $updateStmt = $conn->prepare("UPDATE purchase_orders SET status = 'partial' WHERE id = ?");
+            $updateStmt->bind_param("i", $purchase_id);
+            $updateStmt->execute();
+            $updateStmt->close();
+            $purchase['status'] = 'partial';
+        }
+    } else {
+        if ($purchase['status'] !== 'pending') {
+            $updateStmt = $conn->prepare("UPDATE purchase_orders SET status = 'pending' WHERE id = ?");
+            $updateStmt->bind_param("i", $purchase_id);
+            $updateStmt->execute();
+            $updateStmt->close();
+            $purchase['status'] = 'pending';
+        }
+    }
 }
 $stmt->close();
 
@@ -77,8 +127,7 @@ $stmt = $conn->prepare("
                     '<div class=\'d-flex justify-content-between\'>',
                     '<span class=\'text-nowrap\'>', i.name, '</span>',
                     '<span class=\'ms-2 text-muted\'>', 
-                        CAST(di.received_quantity AS UNSIGNED), ' of ', di.quantity,
-                        ' <small>', i.unit, '</small>',
+                        CAST(di.received_quantity AS UNSIGNED), ' <small>', i.unit, '</small>',
                     '</span>',
                     '</div>'
                 )
@@ -145,9 +194,6 @@ require_once __DIR__ . '/../templates/header.php';
             <div class="btn-group me-2">
                 <a href="edit.php?id=<?php echo $purchase_id; ?>" class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-edit"></i> Edit
-                </a>
-                <a href="create_delivery.php?purchase_id=<?php echo $purchase_id; ?>" class="btn btn-sm btn-primary">
-                    <i class="fas fa-truck"></i> Record Delivery
                 </a>
             </div>
             <a href="index.php" class="btn btn-sm btn-outline-secondary">
@@ -243,6 +289,7 @@ require_once __DIR__ . '/../templates/header.php';
                                 <tr>
                                     <th>Item</th>
                                     <th class="text-end">Quantity</th>
+                                    <th class="text-end">Delivered</th>
                                     <th class="text-end">Unit Price</th>
                                     <th class="text-end">Total</th>
                                 </tr>
@@ -286,6 +333,22 @@ require_once __DIR__ . '/../templates/header.php';
                                                 <?php echo number_format($item['quantity'], 0); ?>
                                                 <span class="text-muted"><?php echo $item['unit']; ?></span>
                                             </td>
+                                            <td class="text-end">
+                                                <?php 
+                                                    $received = (int)$item['total_received'];
+                                                    $total = (int)$item['quantity'];
+                                                    $is_fully_received = ($received >= $total);
+                                                ?>
+                                                <?php if ($is_fully_received): ?>
+                                                    <span class="text-success">
+                                                        <i class="fas fa-check-circle"></i>
+                                                    </span>
+                                                <?php endif; ?>
+                                                <span class="<?php echo $received > 0 ? 'text-primary' : 'text-muted'; ?>">
+                                                    <?php echo number_format($received, 0); ?>
+                                                </span>
+                                                <span class="text-muted">/ <?php echo number_format($total, 0); ?></span>
+                                            </td>
                                             <td class="text-end">₱<?php echo number_format($item['unit_price'], 2); ?></td>
                                             <td class="text-end fw-bold">
                                                 ₱<?php 
@@ -299,7 +362,7 @@ require_once __DIR__ . '/../templates/header.php';
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th colspan="3" class="text-end">Total Amount:</th>
+                                    <th colspan="4" class="text-end">Total Amount:</th>
                                     <th class="text-end">
                                         ₱<?php echo number_format($purchase['total_amount'], 2); ?>
                                     </th>
@@ -396,15 +459,8 @@ require_once __DIR__ . '/../templates/header.php';
                                         <a href="../deliveries/view.php?id=<?php echo $delivery['id']; ?>" 
                                            class="btn btn-sm btn-outline-primary"
                                            title="View Delivery">
-                                            <i class="fas fa-eye"></i>
+                                            <i class="fas fa-eye"></i> View
                                         </a>
-                                        <?php if ($delivery['status'] === 'pending'): ?>
-                                            <a href="../deliveries/edit.php?id=<?php echo $delivery['id']; ?>" 
-                                               class="btn btn-sm btn-outline-secondary"
-                                               title="Edit Delivery">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

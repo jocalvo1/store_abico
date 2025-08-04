@@ -74,13 +74,6 @@ class ProductController {
         return $stmt->execute();
     }
 
-    public function delete($id) {
-        $sql = "DELETE FROM items WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
-    }
-
     public function __destruct() {
         if ($this->conn) {
             $this->conn->close();

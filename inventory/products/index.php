@@ -196,38 +196,6 @@ unset($_SESSION['success'], $_SESSION['error']);
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle delete modal
-    const deleteModal = document.getElementById('deleteModal');
-    const deleteButtons = document.querySelectorAll('.delete-product');
-    
-    if (deleteModal) {
-        const modal = new bootstrap.Modal(deleteModal);
-        const productName = document.getElementById('productName');
-        const confirmDelete = document.getElementById('confirmDelete');
-        let deleteUrl = '';
-        
-        deleteButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const productId = this.getAttribute('data-id');
-                const name = this.getAttribute('data-name');
-                productName.textContent = name;
-                deleteUrl = `delete.php?id=${productId}`;
-                modal.show();
-            });
-        });
-        
-        confirmDelete.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (deleteUrl) {
-                window.location.href = deleteUrl;
-            }
-        });
-    }
-});
-</script>
-
 <?php
 // Include footer
 require_once __DIR__ . '/../../templates/footer.php';

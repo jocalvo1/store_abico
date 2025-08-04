@@ -123,7 +123,7 @@ if (is_object($customers) && method_exists($customers, 'fetch_all')) {
                                                 <i class="fas fa-eye fa-xs"></i><span>View</span>
                                             </a>
                                             <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/edit.php?id=' . $customer['id']; ?>" 
-                                               class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center gap-1" 
+                                               class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" 
                                                title="Edit Customer" data-bs-toggle="tooltip" data-bs-placement="top">
                                                 <i class="fas fa-edit fa-xs"></i><span>Edit</span>
                                             </a>
