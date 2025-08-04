@@ -153,12 +153,30 @@ INSERT INTO payment_methods (name, description) VALUES
 
  Sa unit_price of an item, ang iya ka unit_price ni purchase_order_items is ang original nga price, meaning amo na danay ang gi agreehan nyo nga price. While ang unit_price naman ni deliveries_item, amo na ni ang price pag baligya mo sang mga item. In short, ang purchase_order_items is ang wholesale price, while ang iya ka deliveries_item is ang retail price.
 
- In order: 
- 1. Users
- 2. Suppliers
- 3. Customers
- 4. Items
- 5. Purchase_orders
- 6. Payment_methods
- 7. Purchase_order_items
- 8. Deliveries
+<!-- 
+<?php
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../login.php');
+    exit();
+}
+
+// Include header
+require_once __DIR__ . '/../templates/header.php';
+?>
+
+<div class="container-fluid">
+    <div class="row">
+
+    </div>
+</div>
+
+<?php 
+// Include footer
+require_once __DIR__ . '/../templates/footer.php'; 
+?> -->

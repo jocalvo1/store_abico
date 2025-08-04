@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/../../../includes/database.php';
+require_once __DIR__ . '/../../includes/database.php';
 
-class CustomerController {
+class customerController {
     private $conn;
 
     public function __construct() {
@@ -30,12 +30,6 @@ class CustomerController {
     public function update($id, $data) {
         $stmt = $this->conn->prepare("UPDATE customers SET name = ?, contact = ?, address = ? WHERE id = ?");
         $stmt->bind_param("sssi", $data['name'], $data['contact'], $data['address'], $id);
-        return $stmt->execute();
-    }
-
-    public function delete($id) {
-        $stmt = $this->conn->prepare("DELETE FROM customers WHERE id = ?");
-        $stmt->bind_param("i", $id);
         return $stmt->execute();
     }
 

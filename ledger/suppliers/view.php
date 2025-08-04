@@ -38,8 +38,50 @@ if ($result->num_rows === 0) {
 $supplier = $result->fetch_assoc();
 $stmt->close();
 
-// Initialize purchases array
+// Fetch purchase statistics for this supplier
+$statsStmt = $conn->prepare("
+    SELECT 
+        COUNT(*) as total_orders,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
+        SUM(CASE WHEN status = 'pending' OR status = 'approved' THEN 1 ELSE 0 END) as active_orders,
+        SUM(total_amount) as total_spent,
+        MAX(order_date) as last_order_date
+    FROM purchase_orders 
+    WHERE supplier_id = ?
+");
+$statsStmt->bind_param("i", $supplier_id);
+$statsStmt->execute();
+$statsResult = $statsStmt->get_result();
+$stats = $statsResult->fetch_assoc();
+$statsStmt->close();
+
+// Fetch purchase orders for this supplier with item names
 $purchases = [];
+$purchaseStmt = $conn->prepare("
+    SELECT 
+        po.id, 
+        po.po_number, 
+        po.order_date, 
+        po.status, 
+        po.total_amount,
+        GROUP_CONCAT(p.name SEPARATOR ', ') as items
+    FROM purchase_orders po
+    LEFT JOIN purchase_order_items poi ON po.id = poi.purchase_order_id
+    LEFT JOIN items p ON poi.item_id = p.id
+    WHERE po.supplier_id = ?
+    GROUP BY po.id, po.po_number, po.order_date, po.status, po.total_amount
+    ORDER BY po.order_date DESC
+");
+$purchaseStmt->bind_param("i", $supplier_id);
+$purchaseStmt->execute();
+$purchaseResult = $purchaseStmt->get_result();
+
+if ($purchaseResult) {
+    while ($row = $purchaseResult->fetch_assoc()) {
+        $purchases[] = $row;
+    }
+}
+$purchaseStmt->close();
 $conn->close();
 
 // Include header
@@ -53,7 +95,10 @@ require_once __DIR__ . '/../../templates/header.php';
             <small class="text-muted">Supplier Details</small>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-<a href="index.php" class="btn btn-sm btn-outline-secondary">
+            <a href="edit.php?id=<?php echo $supplier_id; ?>" class="btn btn-sm btn-outline-secondary me-2">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="index.php" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Suppliers
             </a>
         </div>
@@ -66,109 +111,211 @@ require_once __DIR__ . '/../../templates/header.php';
                     <h6 class="mb-0">Supplier Information</h6>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-4">
+                        <!-- Contact Information Column -->
                         <div class="col-md-6">
-                            <h6>Contact Details</h6>
-                            <dl class="mb-0">
-                                <dt>Contact Person</dt>
-                                <dd><?php echo !empty($supplier['contact_person']) ? htmlspecialchars($supplier['contact_person']) : '<span class="text-muted">N/A</span>'; ?></dd>
-                                
-                                <dt class="mt-2">Phone</dt>
-                                <dd>
-                                    <?php if (!empty($supplier['contact_number'])): ?>
-                                        <a href="tel:<?php echo htmlspecialchars($supplier['contact_number']); ?>">
-                                            <?php echo htmlspecialchars($supplier['contact_number']); ?>
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="text-muted">N/A</span>
-                                    <?php endif; ?>
-                                </dd>
-                                
-                                <dt class="mt-2">Email</dt>
-                                <dd>
-                                    <?php if (!empty($supplier['email'])): ?>
-                                        <a href="mailto:<?php echo htmlspecialchars($supplier['email']); ?>">
-                                            <?php echo htmlspecialchars($supplier['email']); ?>
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="text-muted">N/A</span>
-                                    <?php endif; ?>
-                                </dd>
-                            </dl>
+                            <div class="p-3 bg-light rounded-3 h-100">
+                                <h5 class="mb-3 border-bottom pb-2"><i class="fas fa-address-card me-2"></i>Contact Information</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-user-tie fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Contact Person</h6>
+                                                <p class="mb-0"><?php echo $supplier['contact_person'] ? htmlspecialchars($supplier['contact_person']) : '<span class="text-muted">Not specified</span>'; ?></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-phone fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Phone</h6>
+                                                <p class="mb-0"><?php echo $supplier['contact_number'] ? '<a href="tel:' . htmlspecialchars($supplier['contact_number']) . '" class="text-decoration-none">' . htmlspecialchars($supplier['contact_number']) . '</a>' : '<span class="text-muted">Not provided</span>'; ?></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-envelope fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Email</h6>
+                                                <p class="mb-0 text-truncate"><?php echo $supplier['email'] ? '<a href="mailto:' . htmlspecialchars($supplier['email']) . '" class="text-decoration-none">' . htmlspecialchars($supplier['email']) . '</a>' : '<span class="text-muted">Not provided</span>'; ?></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        
+                        <!-- Address & Details Column -->
                         <div class="col-md-6">
-                            <h6>Additional Information</h6>
-                            <dl class="mb-0">
-                                <dt>Supplier Since</dt>
-                                <dd><?php echo date('M d, Y', strtotime($supplier['created_at'])); ?></dd>
-                                
-                                <dt>Total Purchases</dt>
-                                <dd>0 orders</dd>
-                                
-                                <?php if (!empty($supplier['address'])): ?>
-                                    <dt class="mt-2">Address</dt>
-                                    <dd><?php echo nl2br(htmlspecialchars($supplier['address'])); ?></dd>
-                                <?php endif; ?>
-                            </dl>
+                            <div class="p-3 bg-light rounded-3 h-100">
+                                <h5 class="mb-3 border-bottom pb-2"><i class="fas fa-info-circle me-2"></i>Additional Details</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-map-marker-alt fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Address</h6>
+                                                <p class="mb-0"><?php echo $supplier['address'] ? nl2br(htmlspecialchars($supplier['address'])) : '<span class="text-muted">No address provided</span>'; ?></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <div class="flex-shrink-0 me-3 text-primary">
+                                                <i class="fas fa-calendar-alt fa-lg"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-0 text-muted small">Member Since</h6>
+                                                <p class="mb-0"><?php echo date('F j, Y', strtotime($supplier['created_at'])); ?></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">Purchasing</h6>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Purchase history will be available when the purchases module is implemented.
-                    </div>
-                    <div class="text-end">
-                        <a href="#" class="btn btn-primary" disabled>
-                            <i class="fas fa-plus me-1"></i> New Purchase Order
-                        </a>
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0">Quick Actions</h6>
-                </div>
-                <div class="list-group list-group-flush">
-                    <?php if (!empty($supplier['contact_number'])): ?>
-                        <a href="tel:<?php echo htmlspecialchars($supplier['contact_number']); ?>" class="list-group-item list-group-item-action">
-                            <i class="fas fa-phone me-2"></i> Call Supplier
-                        </a>
-                    <?php endif; ?>
-                    <a href="#" class="list-group-item list-group-item-action text-muted" disabled>
-                        <i class="fas fa-file-invoice-dollar me-2"></i> Create Purchase Order (Coming Soon)
-                    </a>
-                    <a href="edit.php?id=<?php echo $supplier_id; ?>" class="list-group-item list-group-item-action text-success">
-                        <i class="fas fa-edit me-2"></i> Edit Supplier
-                    </a>
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Purchase Statistics</h6>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-6">
+                            <div class="p-3 border border-primary rounded text-center">
+                                <h4 class="mb-0"><?php echo number_format($stats['total_orders'] ?? 0); ?></h4>
+                                <small class="text-muted">Total Orders</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-6">
+                            <div class="p-3 border border-info rounded text-center">
+                                <h4 class="mb-0">₱<?php echo number_format($stats['total_spent'] ?? 0, 2); ?></h4>
+                                <small class="text-muted">Total Spent</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-6">
+                            <div class="p-3 border border-warning rounded text-center">
+                                <h4 class="mb-0"><?php echo number_format($stats['active_orders'] ?? 0); ?></h4>
+                                <small class="text-muted">Active Orders</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-6">
+                            <div class="p-3 border border-success rounded text-center">
+                                <h4 class="mb-0"><?php echo number_format($stats['completed_orders'] ?? 0); ?></h4>
+                                <small class="text-muted">Completed Orders</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-6">
+                            <div class="p-3 border border-secondary rounded text-center">
+                                <h4 class="mb-0">
+                                    <?php 
+                                    if (!empty($stats['last_order_date'])) {
+                                        echo date('M d, Y', strtotime($stats['last_order_date']));
+                                    } else {
+                                        echo 'No orders';
+                                    }
+                                    ?>
+                                </h4>
+                                <small class="text-muted">Last Order</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">Purchase Statistics</h6>
-                </div>
-                <div class="card-body">
-                    <dl class="mb-0">
-                        <dt>Total Orders</dt>
-                        <dd>0</dd>
-                        
-                        <dt class="mt-2">Total Spent</dt>
-                        <dd>₱0.00</dd>
-                            
-                        <dt class="mt-2">Average Order</dt>
-                        <dd>₱0.00</dd>
-                    </dl>
-                </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Purchase Orders</h6>
+                <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/add.php?supplier_id=' . $supplier_id; ?>" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i> New Purchase Order
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($purchases)): ?>
+                    <div class="text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-file-invoice fa-3x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">No purchase orders found</h5>
+                        <p class="text-muted">Create a new purchase order to get started</p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>PO #</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Status</th>
+                                    <th>Items</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($purchases as $po): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/view.php?id=' . $po['id']; ?>" class="text-decoration-none">
+                                                <?php echo htmlspecialchars($po['po_number']); ?>
+                                            </a>
+                                        </td>
+                                        <td><?php echo date('M d, Y', strtotime($po['order_date'])); ?></td>
+                                        <td class="text-end">₱<?php echo number_format($po['total_amount'], 2); ?></td>
+                                        <td>
+                                            <?php
+                                            $statusClass = [
+                                                'draft' => 'bg-secondary',
+                                                'ordered' => 'bg-primary',
+                                                'received' => 'bg-success',
+                                                'cancelled' => 'bg-danger'
+                                            ][$po['status']] ?? 'bg-secondary';
+                                            ?>
+                                            <span class="badge <?php echo $statusClass; ?>">
+                                                <?php echo ucfirst(htmlspecialchars($po['status'])); ?>
+                                            </span>
+                                        </td>
+                                        <td title="<?php echo htmlspecialchars($po['items']); ?>">
+                                            <?php 
+                                            $items = explode(', ', $po['items']);
+                                            if (count($items) > 2) {
+                                                echo htmlspecialchars($items[0] . ', ' . $items[1] . ' +' . (count($items) - 2) . ' more');
+                                            } else {
+                                                echo htmlspecialchars($po['items']);
+                                            }
+                                            ?>
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/view.php?id=' . $po['id']; ?>" 
+                                            class="btn btn-sm btn-outline-primary"
+                                            title="View Details"
+                                            data-bs-toggle="tooltip">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

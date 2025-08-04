@@ -11,6 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../templates/header.php';
 
 $errors = [];
 $success = '';
@@ -25,14 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate inputs
     if (empty($name)) {
         $errors[] = 'Customer name is required';
-    }
-    
-    if (empty($contact)) {
-        $errors[] = 'Contact information is required';
-    }
-    
-    if (empty($address)) {
-        $errors[] = 'Address is required';
     }
     
     // If no errors, proceed with database insertion
@@ -69,9 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->close();
     }
 }
-
-// Include header
-require_once __DIR__ . '/../../templates/header.php';
 ?>
 
 <div class="container-fluid px-4">
@@ -104,18 +94,23 @@ require_once __DIR__ . '/../../templates/header.php';
                     <form method="POST" action="" id="customerForm">
                         <div class="mb-3">
                             <label for="name" class="form-label">Customer Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>" required>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="Enter customer name"
+                                   value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>">
                         </div>
                         
                         <div class="mb-3">
-                            <label for="contact" class="form-label">Contact Information <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="contact" name="contact" value="<?php echo isset($_POST['contact']) ? htmlspecialchars($_POST['contact']) : ''; ?>" required>
+                            <label for="contact" class="form-label">Contact Information</label>
+                            <input type="text" class="form-control" id="contact" name="contact" 
+                                   placeholder="e.g., phone number or email"
+                                   value="<?php echo isset($_POST['contact']) ? htmlspecialchars($_POST['contact']) : ''; ?>">
                             <div class="form-text">Phone number or email address</div>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="address" class="form-label">Address <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="address" name="address" rows="3" required><?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?></textarea>
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="3"
+                                      placeholder="Enter full address"><?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?></textarea>
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -130,34 +125,6 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Form validation
-    const form = document.getElementById('customerForm');
-    
-    form.addEventListener('submit', function(event) {
-        let isValid = true;
-        const requiredFields = form.querySelectorAll('[required]');
-        
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                isValid = false;
-                field.classList.add('is-invalid');
-            } else {
-                field.classList.remove('is-invalid');
-            }
-        });
-        
-        if (!isValid) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        
-        form.classList.add('was-validated');
-    });
-});
-</script>
 
 <?php
 // Include footer
