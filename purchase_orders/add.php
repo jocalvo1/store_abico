@@ -93,15 +93,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->begin_transaction();
         
         try {
-            // Insert purchase order
+            // Insert purchase order with current date
+            $current_date = date('Y-m-d');
             $stmt = $conn->prepare("
-                INSERT INTO purchase_orders (supplier_id, po_number, total_amount, notes, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO purchase_orders (supplier_id, po_number, order_date, total_amount, notes, created_by_user_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            
+            
             ");
             $stmt->bind_param(
-                "isdsi",
+                "issdsi",
                 $purchase['supplier_id'],
                 $purchase['po_number'],
+                $current_date,
                 $total_amount,
                 $purchase['notes'],
                 $_SESSION['user_id']
