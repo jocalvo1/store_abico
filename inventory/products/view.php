@@ -48,9 +48,6 @@ require_once __DIR__ . '/../../templates/header.php';
             <a href="index.php" class="btn btn-sm btn-outline-secondary me-2">
                 <i class="fas fa-arrow-left me-1"></i> Back to Products
             </a>
-            <a href="edit.php?id=<?php echo $product_id; ?>" class="btn btn-sm btn-outline-primary">
-                <i class="fas fa-edit me-1"></i> Edit
-            </a>
         </div>
     </div>
 
@@ -127,7 +124,7 @@ require_once __DIR__ . '/../../templates/header.php';
                     <h6 class="mb-0">Timestamps</h6>
                 </div>
                 <div class="card-body">
-                    <ul class="list-unstyled small">
+                    <ul class="list-unstyled small mb-4">
                         <li class="mb-2">
                             <i class="far fa-calendar-plus text-muted me-2"></i>
                             <strong>Created:</strong> 
@@ -135,7 +132,7 @@ require_once __DIR__ . '/../../templates/header.php';
                                 <?php echo $created_at->format('M j, Y \a\t g:i A'); ?>
                             </span>
                         </li>
-                        <li>
+                        <li class="mb-3">
                             <i class="far fa-calendar-check text-muted me-2"></i>
                             <strong>Last Updated:</strong> 
                             <span class="text-muted">
@@ -143,22 +140,10 @@ require_once __DIR__ . '/../../templates/header.php';
                             </span>
                         </li>
                     </ul>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">Quick Actions</h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="edit.php?id=<?php echo $product_id; ?>" class="btn btn-outline-primary btn-sm">
+                    <div class="d-grid">
+                        <a href="edit.php?id=<?php echo $product_id; ?>" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-edit me-1"></i> Edit Product
                         </a>
-                        <button type="button" class="btn btn-outline-danger btn-sm" 
-                                data-bs-toggle="modal" data-bs-target="#deleteModal">
-                            <i class="fas fa-trash me-1"></i> Delete Product
-                        </button>
                     </div>
                 </div>
             </div>
@@ -166,28 +151,6 @@ require_once __DIR__ . '/../../templates/header.php';
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this product?</p>
-                <p class="mb-0"><strong>Product:</strong> <?php echo htmlspecialchars($product['name']); ?></p>
-                <p class="text-danger mt-2"><i class="fas fa-exclamation-triangle me-2"></i>This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="delete.php?id=<?php echo $product_id; ?>" class="btn btn-danger">
-                    <i class="fas fa-trash me-1"></i> Delete
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
 
 <?php 
 // Include footer

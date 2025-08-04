@@ -115,14 +115,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-center" style="width: 50px;">#</th>
-                                <th>Name</th>
-                                <th>Description</th>
-                                <th>Category</th>
-                                <th class="text-center">Unit</th>
-                                <th class="text-end">Stock</th>
-                                <th class="text-end">Price</th>
-                                <th class="text-end" style="width: 120px;">Actions</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold">Name</th>
+                                <th class="text-uppercase text-muted small fw-bold">Description</th>
+                                <th class="text-uppercase text-muted small fw-bold">Category</th>
+                                <th class="text-uppercase text-muted small fw-bold">Unit</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end">Stock</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end">Price</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -161,7 +161,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                     <td class="text-center text-muted"><?php echo htmlspecialchars($product['unit']); ?></td>
                                     <td class="text-end">
                                         <span class="fw-bold <?php echo $stockClass; ?>">
-                                            <?php echo number_format($stock, 2); ?>
+                                            <?php echo number_format($stock, 0); ?>
                                         </span>
                                         <?php if ($stock <= $reorderLevel && $reorderLevel > 0): ?>
                                             <div class="small text-muted">
@@ -172,25 +172,18 @@ unset($_SESSION['success'], $_SESSION['error']);
                                     <td class="text-end fw-bold">
                                         ₱<?php echo number_format($product['selling_price'], 2); ?>
                                     </td>
-                                    <td class="text-end">
-                                        <div class="btn-group">
+                                    <td class="text-end pe-3">
+                                        <div class="d-flex gap-1 justify-content-end">
                                             <a href="view.php?id=<?php echo $product['id']; ?>" 
-                                               class="btn btn-sm btn-outline-primary" 
-                                               title="View">
-                                                <i class="fas fa-eye"></i>
+                                               class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 
+                                               title="View Details" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                <i class="fas fa-eye fa-xs"></i><span>View</span>
                                             </a>
                                             <a href="edit.php?id=<?php echo $product['id']; ?>" 
-                                               class="btn btn-sm btn-outline-secondary" 
-                                               title="Edit">
-                                                <i class="fas fa-edit"></i>
+                                               class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center gap-1" 
+                                               title="Edit Product" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                <i class="fas fa-edit fa-xs"></i><span>Edit</span>
                                             </a>
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-outline-danger delete-product" 
-                                                    data-id="<?php echo $product['id']; ?>"
-                                                    data-name="<?php echo htmlspecialchars($product['name']); ?>"
-                                                    title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -199,29 +192,6 @@ unset($_SESSION['success'], $_SESSION['error']);
                     </table>
                 </div>
             <?php endif; ?>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this product?</p>
-                <p class="mb-0"><strong>Product:</strong> <span id="productName"></span></p>
-                <p class="text-danger mt-2"><i class="fas fa-exclamation-triangle me-2"></i>This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="#" id="confirmDelete" class="btn btn-danger">
-                    <i class="fas fa-trash me-1"></i> Delete
-                </a>
-            </div>
         </div>
     </div>
 </div>
