@@ -100,23 +100,23 @@ function isActive($paths, $class = 'active') {
 
                 <!-- Inventory Dropdown -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle <?= isActive(['inventory', 'products', 'categories']) ?>" href="#" id="inventoryDropdown" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle <?= isActive(['inventory', 'products', 'categories', 'stock_movements']) ?>" href="#" id="inventoryDropdown" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-boxes me-1"></i> INVENTORY
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="<?= url('inventory/products/'); ?>"><i class="fas fa-box me-2"></i>PRODUCTS</a></li>
-                        <li><a class="dropdown-item" href="<?= url('inventory/stock_movements/'); ?>"><i class="fas fa-exchange-alt me-2"></i>STOCK MOVEMENTS</a></li>
+                        <li><a class="dropdown-item <?= isActive('inventory/products') ?>" href="<?= url('inventory/products/'); ?>"><i class="fas fa-box me-2"></i>PRODUCTS</a></li>
+                        <li><a class="dropdown-item <?= isActive('inventory/stock_movements') ?>" href="<?= url('inventory/stock_movements/'); ?>"><i class="fas fa-exchange-alt me-2"></i>STOCK MOVEMENTS</a></li>
                     </ul>
                 </li>
 
                 <!-- Purchase Orders Dropdown -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle <?= isActive(['purchase_orders', 'purchases']) ?>" href="#" id="purchaseDropdown" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle <?= isActive(['purchase_orders', 'purchases', 'deliveries']) ?>" href="#" id="purchaseDropdown" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-shopping-cart me-1"></i> PURCHASE ORDERS
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="<?= url('purchase_orders/'); ?>"><i class="fas fa-list me-2"></i>PURCHASE ORDER LIST</a></li>
-                        <li><a class="dropdown-item" href="<?= url('deliveries/'); ?>"><i class="fas fa-truck me-2"></i>DELIVERIES</a></li>
+                        <li><a class="dropdown-item <?= isActive('purchase_orders') ?>" href="<?= url('purchase_orders/'); ?>"><i class="fas fa-list me-2"></i>PURCHASE ORDER LIST</a></li>
+                        <li><a class="dropdown-item <?= isActive('deliveries') ?>" href="<?= url('deliveries/'); ?>"><i class="fas fa-truck me-2"></i>DELIVERIES</a></li>
                     </ul>
                 </li>
 

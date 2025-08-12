@@ -180,3 +180,18 @@ require_once __DIR__ . '/../templates/header.php';
 // Include footer
 require_once __DIR__ . '/../templates/footer.php'; 
 ?> -->
+
+Inventory 
+ <!-- - Products -->
+ <!-- - Stock Movements -->
+Purchase Orders
+ - Purchase Order List
+ - Deliveries
+Sales
+ - Sales Transaction
+ - Create New Sale
+Ledger
+ - Customers
+ - Suppliers
+ - Check Exchanges
+ - Payments
