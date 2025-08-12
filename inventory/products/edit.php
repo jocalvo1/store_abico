@@ -30,30 +30,53 @@ if (!$product) {
     exit();
 }
 
+$originalProduct = $product; // Keep original values for stock movement comparison
+
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Validate and sanitize input
-    $product['name'] = trim($_POST['name'] ?? '');
-    $product['sku'] = trim($_POST['sku'] ?? '');
-    $product['description'] = trim($_POST['description'] ?? '');
-    $product['category'] = trim($_POST['category'] ?? '');
-    $product['unit'] = trim($_POST['unit'] ?? '');
-    $product['current_stock'] = floatval($_POST['current_stock'] ?? 0);
+    // Read-only product fields: always keep original values
+    $product['name'] = $originalProduct['name'];
+    $product['description'] = $originalProduct['description'];
+    $product['category'] = $originalProduct['category'];
+    $product['unit'] = $originalProduct['unit'];
+
+    // Inventory/pricing fields
     $product['reorder_level'] = floatval($_POST['reorder_level'] ?? 0);
     $product['selling_price'] = floatval($_POST['selling_price'] ?? 0);
+
+    // Stock adjustment inputs
+    $originalStock = (float)($originalProduct['current_stock'] ?? 0);
+    $adjustType = $_POST['adjust_type'] ?? '';
+    $adjustQty = isset($_POST['adjust_qty']) ? floatval($_POST['adjust_qty']) : 0;
+    $adjustNotes = trim($_POST['adjust_notes'] ?? '');
+
+    // Default to original stock; apply adjustment if any
+    $product['current_stock'] = $originalStock;
+    if ($adjustQty > 0) {
+        if ($adjustType === 'increase') {
+            $product['current_stock'] = $originalStock + $adjustQty;
+        } elseif ($adjustType === 'decrease') {
+            $product['current_stock'] = $originalStock - $adjustQty;
+        }
+    }
     
     // Validate
     if (empty($product['name'])) {
         $errors[] = "Product name is required.";
     }
     
-    if (empty($product['category'])) {
-        $errors[] = "Category is required.";
-    }
-    
-    if (empty($product['unit'])) {
-        $errors[] = "Unit is required.";
+    // Validate stock adjustment if provided
+    if ($adjustQty > 0) {
+        if (!in_array($adjustType, ['increase','decrease'], true)) {
+            $errors[] = 'Select a valid adjustment type.';
+        }
+        if ($adjustType === 'decrease' && $adjustQty > $originalStock) {
+            $errors[] = 'Cannot decrease more than current stock.';
+        }
+        if ($adjustNotes === '') {
+            $errors[] = 'Please provide adjustment notes.';
+        }
     }
     
     if ($product['selling_price'] < 0) {
@@ -63,6 +86,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // If no errors, update the product
     if (empty($errors)) {
         if ($productController->update($product_id, $product)) {
+            // Log stock movement if stock changed
+            $oldStock = (float)($originalProduct['current_stock'] ?? 0);
+            $newStock = (float)($product['current_stock'] ?? 0);
+            $diff = $newStock - $oldStock;
+            if (abs($diff) > 0) {
+                $db = getDBConnection();
+                $movementType = $diff > 0 ? 'in' : 'out';
+                $quantity = abs($diff);
+                $referenceType = 'adjustment';
+                $referenceId = $product_id;
+                // Build detailed notes (reason removed, keep notes only)
+                $noteSuffix = 'from ' . $oldStock . ' to ' . $newStock;
+                $baseNote = $adjustNotes !== '' ? $adjustNotes : 'Stock adjusted';
+                $notes = trim($baseNote . ' (' . $noteSuffix . ')');
+                if ($stmtMv = $db->prepare('INSERT INTO stock_movements (item_id, movement_type, quantity, reference_type, reference_id, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())')) {
+                    // Bind: i (item_id), s (movement_type), d (quantity), s (reference_type), i (reference_id), s (notes)
+                    $stmtMv->bind_param('isdsis', $product_id, $movementType, $quantity, $referenceType, $referenceId, $notes);
+                    $stmtMv->execute();
+                    $stmtMv->close();
+                }
+                $db->close();
+            }
+
             $_SESSION['success'] = "Product updated successfully!";
             header("Location: view.php?id=" . $product_id);
             exit();
@@ -108,136 +154,50 @@ require_once __DIR__ . '/../../templates/header.php';
                 <div class="card-body">
                     <form method="post" id="productForm">
                         <div class="mb-3">
-                            <label for="name" class="form-label">Product Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" 
-                                   value="<?php echo htmlspecialchars($product['name']); ?>" required>
+                            <label class="form-label">Product</label>
+                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($product['name']); ?>" readonly>
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" 
-                                     rows="3"><?php echo htmlspecialchars($product['description']); ?></textarea>
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" rows="2" readonly><?php echo htmlspecialchars($product['description']); ?></textarea>
                         </div>
-                        
                         <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
-                                <?php
-                                // Check if the current category is a custom one (not in the standard list)
-                                $standardCategories = ['Electronics', 'Clothing', 'Food', 'Beverages'];
-                                $isCustomCategory = !in_array($product['category'], $standardCategories) && !empty($product['category']);
-                                ?>
-                                <select class="form-select" id="category" name="category" required onchange="toggleOtherInput('category')">
-                                    <option value="" disabled>Select a category</option>
-                                    <option value="Electronics" <?php echo $product['category'] === 'Electronics' ? 'selected' : ''; ?>>Electronics</option>
-                                    <option value="Clothing" <?php echo $product['category'] === 'Clothing' ? 'selected' : ''; ?>>Clothing</option>
-                                    <option value="Food" <?php echo $product['category'] === 'Food' ? 'selected' : ''; ?>>Food</option>
-                                    <option value="Beverages" <?php echo $product['category'] === 'Beverages' ? 'selected' : ''; ?>>Beverages</option>
-                                    <option value="Other" <?php echo $isCustomCategory ? 'selected' : ''; ?>>Other (please specify)</option>
-                                    <?php if ($isCustomCategory): ?>
-                                        <option value="<?php echo htmlspecialchars($product['category']); ?>" selected><?php echo htmlspecialchars($product['category']); ?></option>
-                                    <?php endif; ?>
-                                </select>
-                                <div id="category_other_container" class="mt-2" style="display: <?php echo $isCustomCategory ? 'block' : 'none'; ?>">
-                                    <label for="category_other" class="form-label">Specify Category</label>
-                                    <input type="text" class="form-control" id="category_other" name="category_other" 
-                                           value="<?php echo $isCustomCategory ? htmlspecialchars($product['category']) : ''; ?>"
-                                           placeholder="Enter category name"
-                                           <?php echo $isCustomCategory ? 'required' : ''; ?>>
-                                </div>
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label class="form-label">Category</label>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($product['category']); ?>" readonly>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label d-block mb-2">Unit <span class="text-danger">*</span></label>
-                                
-                                <!-- Unit Value Input -->
-                                <div class="mb-2">
-                                    <label for="unit_value" class="form-label small text-muted mb-1">Quantity</label>
-                                    <?php 
-                                        // Parse the unit value and type from the stored unit
-                                        $unitValue = 1;
-                                        $unitType = 'pcs';
-                                        if (!empty($product['unit'])) {
-                                            $unitParts = explode(' ', $product['unit'], 2);
-                                            if (count($unitParts) === 2) {
-                                                $unitValue = is_numeric($unitParts[0]) ? $unitParts[0] : 1;
-                                                $unitType = $unitParts[1];
-                                            } else {
-                                                $unitType = $product['unit'];
-                                            }
-                                        }
-                                    ?>
-                                    <input type="number" 
-                                           step="0.01" 
-                                           class="form-control" 
-                                           id="unit_value" 
-                                           name="unit_value" 
-                                           value="<?php echo $unitValue; ?>" 
-                                           min="0.01" 
-                                           required
-                                           oninput="updateUnitValue()">
-                                </div>
-
-                                <!-- Unit Type Selection -->
-                                <div class="mb-2">
-                                    <label for="unit_type" class="form-label small text-muted mb-1">Unit Type</label>
-                                    <select class="form-select" 
-                                            id="unit_type" 
-                                            name="unit_type" 
-                                            required 
-                                            onchange="toggleOtherInput('unit_type')">
-                                        <optgroup label="Common Units">
-                                            <option value="pcs" <?php echo $unitType === 'pcs' ? 'selected' : ''; ?>>Pieces (pcs)</option>
-                                            <option value="box" <?php echo $unitType === 'box' ? 'selected' : ''; ?>>Boxes (box)</option>
-                                            <option value="pack" <?php echo $unitType === 'pack' ? 'selected' : ''; ?>>Packs (pack)</option>
-                                        </optgroup>
-                                        <optgroup label="Weight">
-                                            <option value="kg" <?php echo $unitType === 'kg' ? 'selected' : ''; ?>>Kilograms (kg)</option>
-                                            <option value="g" <?php echo $unitType === 'g' ? 'selected' : ''; ?>>Grams (g)</option>
-                                        </optgroup>
-                                        <optgroup label="Volume">
-                                            <option value="L" <?php echo $unitType === 'L' ? 'selected' : ''; ?>>Liters (L)</option>
-                                            <option value="ml" <?php echo $unitType === 'ml' ? 'selected' : ''; ?>>Milliliters (ml)</option>
-                                        </optgroup>
-                                        <option value="Other" <?php echo !in_array($unitType, ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'ml']) ? 'selected' : ''; ?>>Other (specify)</option>
-                                    </select>
-                                </div>
-
-                                <!-- Custom Unit Input (shown when 'Other' is selected) -->
-                                <div id="unit_type_other_container" class="mb-2" style="display: <?php echo !in_array($unitType, ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'ml', '']) ? 'block' : 'none'; ?>">
-                                    <label for="unit_type_other" class="form-label small text-muted mb-1">Custom Unit</label>
-                                    <div class="input-group">
-                                        <input type="text" 
-                                               class="form-control" 
-                                               id="unit_type_other" 
-                                               name="unit_type_other" 
-                                               value="<?php echo !in_array($unitType, ['pcs', 'box', 'pack', 'kg', 'g', 'L', 'ml', '']) ? $unitType : ''; ?>" 
-                                               placeholder="e.g., carton, bundle"
-                                               oninput="updateUnitValue()">
-                                    </div>
-                                </div>
-
-                                <!-- Preview of the final unit -->
-                                <div class="mt-2">
-                                    <small class="text-muted d-block mb-1">Preview:</small>
-                                    <div class="p-2 bg-light rounded">
-                                        <span id="unit_preview"><?php echo htmlspecialchars($product['unit']); ?></span>
-                                    </div>
-                                </div>
-
-                                <input type="hidden" id="unit" name="unit" value="<?php echo htmlspecialchars($product['unit']); ?>">
+                                <label class="form-label">Unit</label>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($product['unit']); ?>" readonly>
                             </div>
                         </div>
                         
+                        <?php 
+                            // Compute initial inventory status for badge
+                            $initStock = (float)($product['current_stock'] ?? 0);
+                            $initReorder = (float)($product['reorder_level'] ?? 0);
+                            $initStatusClass = 'success';
+                            $initStatusLabel = 'In Stock';
+                            if ($initStock <= 0) { $initStatusClass = 'danger'; $initStatusLabel = 'Out of Stock'; }
+                            elseif ($initReorder > 0 && $initStock <= $initReorder) { $initStatusClass = 'warning'; $initStatusLabel = 'Low Stock'; }
+                        ?>
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label for="current_stock" class="form-label">Current Stock</label>
+                                <label for="current_stock" class="form-label d-flex align-items-center justify-content-between">
+                                    <span>Current Stock</span>
+                                    <span id="stock_status_badge" class="badge text-bg-<?php echo $initStatusClass; ?> ms-2">
+                                        <i class="fas fa-circle me-1"></i><span id="stock_status_text"><?php echo $initStatusLabel; ?></span>
+                                    </span>
+                                </label>
                                 <input type="number" step="0.01" class="form-control" id="current_stock" 
-                                       name="current_stock" value="<?php echo $product['current_stock']; ?>">
+                                       name="current_stock" value="<?php echo $product['current_stock']; ?>" readonly>
+                                <div class="form-text">Read-only. Adjust stock using the section below.</div>
                             </div>
                             <div class="col-md-4">
                                 <label for="reorder_level" class="form-label">Reorder Level</label>
                                 <input type="number" step="0.01" class="form-control" id="reorder_level" 
                                        name="reorder_level" value="<?php echo $product['reorder_level']; ?>">
+                                <div class="form-text">Below this level, item is considered low stock.</div>
                             </div>
                             <div class="col-md-4">
                                 <label for="selling_price" class="form-label">Selling Price <span class="text-danger">*</span></label>
@@ -245,6 +205,34 @@ require_once __DIR__ . '/../../templates/header.php';
                                     <span class="input-group-text">₱</span>
                                     <input type="number" step="0.01" class="form-control" id="selling_price" 
                                            name="selling_price" value="<?php echo $product['selling_price']; ?>" required>
+                                </div>
+                                <div class="form-text">Customer price including VAT if applicable.</div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-light">
+                                <strong>Adjust Stock</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Adjustment Type</label>
+                                        <select name="adjust_type" id="adjust_type" class="form-select">
+                                            <option value="">Select</option>
+                                            <option value="increase">Increase</option>
+                                            <option value="decrease">Decrease</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Quantity</label>
+                                        <input type="number" step="0.01" min="0.01" class="form-control" name="adjust_qty" id="adjust_qty" placeholder="0.00">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Notes</label>
+                                        <textarea class="form-control" name="adjust_notes" id="adjust_notes" rows="2" placeholder="Describe what happened (required if adjusting)"></textarea>
+                                        <div class="form-text">If adjusting, provide details. Example: "Expired items removed".</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -298,13 +286,40 @@ require_once __DIR__ . '/../../templates/header.php';
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
 
-        // Function to update the hidden unit field and preview
+        // Dynamic inventory status badge updater
+        function updateStockStatus() {
+            const stockInput = document.getElementById('current_stock');
+            const reorderInput = document.getElementById('reorder_level');
+            const badge = document.getElementById('stock_status_badge');
+            const labelEl = document.getElementById('stock_status_text');
+            if (!stockInput || !reorderInput || !badge || !labelEl) return;
+
+            const stock = parseFloat(stockInput.value || '0');
+            const reorder = parseFloat(reorderInput.value || '0');
+
+            let state = 'success';
+            let label = 'In Stock';
+            if (isNaN(stock) || stock <= 0) { state = 'danger'; label = 'Out of Stock'; }
+            else if (!isNaN(reorder) && reorder > 0 && stock <= reorder) { state = 'warning'; label = 'Low Stock'; }
+
+            // Reset class to reflect new state
+            badge.classList.remove('text-bg-success','text-bg-warning','text-bg-danger');
+            badge.classList.add('text-bg-' + state);
+            labelEl.textContent = label;
+        }
+
+        // Function retained for compatibility, guarded if unit fields are absent
         function updateUnitValue() {
-            const unitValue = document.getElementById('unit_value').value;
-            let unitType = document.getElementById('unit_type').value;
+            const unitValueEl = document.getElementById('unit_value');
+            const unitTypeEl = document.getElementById('unit_type');
+            const hiddenUnit = document.getElementById('unit');
+            const preview = document.getElementById('unit_preview');
+            if (!unitValueEl || !unitTypeEl || !hiddenUnit) return '';
+
+            const unitValue = unitValueEl.value;
+            let unitType = unitTypeEl.value;
             let displayUnit = unitType;
-            
-            // If 'Other' is selected, use the custom input value
+
             if (unitType === 'Other') {
                 const otherInput = document.getElementById('unit_type_other');
                 if (otherInput) {
@@ -312,17 +327,12 @@ require_once __DIR__ . '/../../templates/header.php';
                     displayUnit = unitType;
                 }
             }
-            
-            // Update the hidden field for form submission
+
             const formattedValue = unitValue ? `${unitValue} ${unitType}` : '';
-            document.getElementById('unit').value = formattedValue;
-            
-            // Update the preview
-            const preview = document.getElementById('unit_preview');
+            hiddenUnit.value = formattedValue;
             if (preview) {
                 preview.textContent = unitValue ? `${unitValue} ${displayUnit}` : 'No unit selected';
             }
-            
             return formattedValue;
         }
 
@@ -331,26 +341,22 @@ require_once __DIR__ . '/../../templates/header.php';
             const selectElement = document.getElementById(fieldType);
             const otherContainer = document.getElementById(`${fieldType}_other_container`);
             const otherInput = document.getElementById(`${fieldType}_other`);
-            
+            if (!selectElement || !otherContainer) return;
             if (selectElement.value === 'Other') {
                 otherContainer.style.display = 'block';
-                if (otherInput) {
-                    otherInput.required = true;
-                    otherInput.focus();
-                }
+                if (otherInput) { otherInput.required = true; otherInput.focus(); }
             } else {
                 otherContainer.style.display = 'none';
-                if (otherInput) {
-                    otherInput.required = false;
-                    otherInput.value = '';
-                }
+                if (otherInput) { otherInput.required = false; otherInput.value = ''; }
             }
             updateUnitValue();
         }
 
         // Check if we need to show 'Other' fields on page load
         window.addEventListener('load', function() {
-            // Check category
+            // Update inventory status on load
+            updateStockStatus();
+            // If category/unit fields are present (older layout), keep behavior; otherwise skip.
             const categorySelect = document.getElementById('category');
             if (categorySelect) {
                 const isCustomCategory = !['Electronics', 'Clothing', 'Food', 'Beverages', 'Other', ''].includes(categorySelect.value);
@@ -364,73 +370,23 @@ require_once __DIR__ . '/../../templates/header.php';
                     }
                 }
             }
-
-            // Update unit preview on page load
             updateUnitValue();
         });
 
-        // Update form submission to handle other fields
-        document.getElementById('productForm').addEventListener('submit', function(e) {
-            // Handle custom category first
-            const categorySelect = document.getElementById('category');
-            const categoryOtherInput = document.getElementById('category_other');
-            
-            // If 'Other' is selected or the current value is a custom category
-            if (categorySelect.value === 'Other' || 
-                (categorySelect.options[categorySelect.selectedIndex] && 
-                 categorySelect.options[categorySelect.selectedIndex].value === 'Other')) {
-                
-                if (categoryOtherInput && categoryOtherInput.value.trim()) {
-                    const customCategory = categoryOtherInput.value.trim();
-                    
-                    // Check if we already have this option to avoid duplicates
-                    let optionExists = false;
-                    for (let i = 0; i < categorySelect.options.length; i++) {
-                        if (categorySelect.options[i].value === customCategory) {
-                            optionExists = true;
-                            break;
-                        }
-                    }
-                    
-                    // Add the custom category as a new option if it doesn't exist
-                    if (!optionExists) {
-                        const option = new Option(customCategory, customCategory);
-                        categorySelect.add(option);
-                    }
-                    
-                    // Set the value to the custom category
-                    categorySelect.value = customCategory;
-                } else {
-                    // If 'Other' is selected but no value provided, prevent form submission
-                    e.preventDefault();
-                    alert('Please specify a category');
-                    return false;
-                }
-            }
-            
-            // Handle custom unit type
-            const unitTypeSelect = document.getElementById('unit_type');
-            const unitTypeOtherInput = document.getElementById('unit_type_other');
-            
-            if (unitTypeSelect.value === 'Other') {
-                if (unitTypeOtherInput && unitTypeOtherInput.value.trim()) {
-                    // Update the hidden unit field with the custom unit
-                    const unitValue = document.getElementById('unit_value').value;
-                    const customUnit = unitTypeOtherInput.value.trim();
-                    document.getElementById('unit').value = `${unitValue} ${customUnit}`;
-                } else {
-                    // If 'Other' is selected but no unit provided, prevent form submission
-                    e.preventDefault();
-                    alert('Please specify a unit type');
-                    return false;
-                }
-            } else {
-                // For standard units, ensure the unit is updated
-                updateUnitValue();
-            }
-            
-            // If we got here, all validations passed and the form will submit
-        });
+        // Attach listeners for live inventory status updates
+        const stockEl = document.getElementById('current_stock');
+        const reorderEl = document.getElementById('reorder_level');
+        if (stockEl) stockEl.addEventListener('input', updateStockStatus);
+        if (reorderEl) reorderEl.addEventListener('input', updateStockStatus);
+
+        // Update form submission: nothing needed for read-only meta fields
+        const form = document.getElementById('productForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                // Keep status fresh on submit
+                updateStockStatus();
+            });
+        }
     });
 </script>
 

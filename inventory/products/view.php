@@ -34,6 +34,12 @@ if (!$product) {
 $created_at = new DateTime($product['created_at']);
 $updated_at = new DateTime($product['updated_at']);
 
+// Flash messages
+$successMessage = isset($_SESSION['success']) ? $_SESSION['success'] : null;
+$errorMessage = isset($_SESSION['error']) ? $_SESSION['error'] : null;
+// Clear after reading
+unset($_SESSION['success'], $_SESSION['error']);
+
 // Include header
 require_once __DIR__ . '/../../templates/header.php';
 ?>
@@ -51,6 +57,19 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 
+    <?php if ($successMessage): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <?php echo htmlspecialchars($successMessage); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($errorMessage): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?php echo htmlspecialchars($errorMessage); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
     <div class="row">
         <div class="col-md-8">
             <div class="card mb-4">
@@ -58,61 +77,72 @@ require_once __DIR__ . '/../../templates/header.php';
                     <h6 class="mb-0">Product Information</h6>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Basic Information</h6>
-                            <dl class="mb-0">
-                                <dt>SKU</dt>
-                                <dd><?php echo !empty($product['sku']) ? htmlspecialchars($product['sku']) : '<span class="text-muted">N/A</span>'; ?></dd>
-                                
-                                <dt class="mt-3">Category</dt>
-                                <dd>
-                                    <span class="badge bg-light text-dark">
-                                        <?php echo !empty($product['category']) ? htmlspecialchars($product['category']) : '<span class="text-muted">N/A</span>'; ?>
+                    <?php 
+                        $stock = $product['current_stock'];
+                        $reorderLevel = $product['reorder_level'] ?? 0;
+                        $stockStateClass = 'success';
+                        $statusLabel = 'In Stock';
+                        if ($stock <= 0) { $stockStateClass = 'danger'; $statusLabel = 'Out of Stock'; }
+                        elseif ($reorderLevel > 0 && $stock <= $reorderLevel) { $stockStateClass = 'warning'; $statusLabel = 'Low Stock'; }
+                        $progressPct = $reorderLevel > 0 ? min(100, max(0, ($stock / $reorderLevel) * 100)) : null;
+                    ?>
+
+                    <div class="row g-3 align-items-stretch">
+                        <div class="col-lg-7">
+                            <div class="mb-3">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge rounded-pill bg-light text-dark">
+                                        <i class="fas fa-tag me-1"></i>
+                                        <?php echo !empty($product['category']) ? htmlspecialchars($product['category']) : 'Uncategorized'; ?>
                                     </span>
-                                </dd>
-                                
-                                <dt class="mt-3">Unit</dt>
-                                <dd><?php echo !empty($product['unit']) ? htmlspecialchars($product['unit']) : '<span class="text-muted">N/A</span>'; ?></dd>
-                            </dl>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Inventory</h6>
-                            <dl class="mb-0">
-                                <dt>Current Stock</dt>
-                                <dd>
-                                    <?php 
-                                    $stock = $product['current_stock'];
-                                    $reorderLevel = $product['reorder_level'] ?? 0;
-                                    $stockClass = 'text-success';
-                                    
-                                    if ($stock <= 0) {
-                                        $stockClass = 'text-danger';
-                                    } elseif ($stock <= $reorderLevel) {
-                                        $stockClass = 'text-warning';
-                                    }
-                                    ?>
-                                    <span class="fw-bold <?php echo $stockClass; ?>">
-                                        <?php echo number_format($stock, 2); ?>
+                                    <span class="badge rounded-pill bg-secondary-subtle text-dark">
+                                        <i class="fas fa-box me-1"></i>
+                                        <?php echo !empty($product['unit']) ? htmlspecialchars($product['unit']) : 'No unit'; ?>
                                     </span>
-                                    <?php if ($reorderLevel > 0): ?>
-                                        <small class="text-muted">
-                                            (Reorder at: <?php echo $reorderLevel; ?>)
-                                        </small>
-                                    <?php endif; ?>
-                                </dd>
-                                
-                                <dt class="mt-3">Selling Price</dt>
-                                <dd class="fw-bold">₱<?php echo number_format($product['selling_price'], 2); ?></dd>
-                            </dl>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h6 class="text-muted mb-2">Description</h6>
+                                <div class="p-3 rounded border bg-light-subtle">
+                                    <p class="mb-0">
+                                        <?php echo !empty($product['description']) ? nl2br(htmlspecialchars($product['description'])) : '<span class="text-muted">No description provided.</span>'; ?>
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="mt-4">
-                        <h6>Description</h6>
-                        <p class="mb-0">
-                            <?php echo !empty($product['description']) ? nl2br(htmlspecialchars($product['description'])) : '<span class="text-muted">No description provided.</span>'; ?>
-                        </p>
+
+                        <div class="col-lg-5">
+                            <div class="border rounded p-3 h-100 d-flex flex-column justify-content-between">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <h6 class="mb-1 text-muted">Inventory Status</h6>
+                                        <span class="badge text-bg-<?php echo $stockStateClass; ?>">
+                                            <i class="fas fa-circle me-1"></i><?php echo $statusLabel; ?>
+                                        </span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex justify-content-between small">
+                                            <span>Stock</span>
+                                            <span class="fw-semibold text-<?php echo $stockStateClass; ?>"><?php echo number_format($stock, 2); ?></span>
+                                        </div>
+                                        <?php if ($reorderLevel > 0): ?>
+                                            <div class="d-flex justify-content-between small text-muted">
+                                                <span>Reorder Level</span>
+                                                <span><?php echo number_format($reorderLevel, 2); ?></span>
+                                            </div>
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div class="progress-bar bg-<?php echo $stockStateClass; ?>" role="progressbar" style="width: <?php echo number_format($progressPct, 0); ?>%" aria-valuenow="<?php echo (int)$progressPct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Selling Price</div>
+                                    <div class="display-6 fw-semibold">₱<?php echo number_format($product['selling_price'], 2); ?></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

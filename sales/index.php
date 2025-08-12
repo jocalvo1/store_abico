@@ -12,28 +12,20 @@ if (!isset($_SESSION['user_id'])) {
 
 // Include required files
 require_once __DIR__ . '/../templates/header.php';
+require_once __DIR__ . '/../includes/database.php';
 require_once __DIR__ . '/../controller/sale/SalesController.php';
 
-// Initialize SalesController
-$salesController = new SalesController();
+// Initialize SalesController with DB connection
+$db = getDBConnection();
+$salesController = new SalesController($db);
 
 // Handle search
 $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// Get sales based on search
-if (!empty($searchTerm)) {
-    $sales = $salesController->search($searchTerm);
-} else {
-    $sales = $salesController->getAll();
-}
-
-// Get sales as array
-$salesArray = [];
-if (is_object($sales) && method_exists($sales, 'fetch')) {
-    while ($sale = $sales->fetch()) {
-        $salesArray[] = $sale;
-    }
-}
+// Get sales as array based on search
+$salesArray = !empty($searchTerm)
+    ? $salesController->search($searchTerm)
+    : $salesController->getAll();
 ?>
 
 <div class="container-fluid py-4">
@@ -89,8 +81,8 @@ if (is_object($sales) && method_exists($sales, 'fetch')) {
                                 <th>Customer</th>
                                 <th class="text-end">Amount</th>
                                 <th>Payment</th>
-                                <th>Status</th>
-                                <th class="text-end pe-3">Actions</th>
+                                <th class="text-center" style="width:1%">Status</th>
+                                <th class="text-end pe-3" style="width:1%; white-space:nowrap">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -117,31 +109,37 @@ if (is_object($sales) && method_exists($sales, 'fetch')) {
                                 <td><?php echo htmlspecialchars($sale['customer_name'] ?? 'Walk-in Customer'); ?></td>
                                 <td class="text-end">₱<?php echo number_format($sale['total_amount'], 2); ?></td>
                                 <td><?php echo htmlspecialchars($sale['payment_method_name']); ?></td>
-                                <td>
+                                <td class="text-center" style="width:1%">
                                     <span class="badge bg-<?php echo $statusClass; ?> text-uppercase">
                                         <?php echo ucfirst($sale['status']); ?>
                                     </span>
                                 </td>
-                                <td class="text-end pe-3">
-                                    <div class="btn-group">
-                                        <a href="view.php?id=<?php echo $sale['id']; ?>" 
-                                           class="btn btn-sm btn-outline-primary" 
-                                           title="View">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="#" 
-                                           class="btn btn-sm btn-outline-secondary print-receipt" 
-                                           data-id="<?php echo $sale['id']; ?>"
-                                           title="Print Receipt">
-                                            <i class="fas fa-print"></i>
-                                        </a>
+                                <td class="text-end pe-3 text-nowrap" style="width:1%">
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Actions">
                                         <?php if ($sale['status'] === 'debt' || $sale['status'] === 'partial'): ?>
+                                        <?php 
+                                          $isDebt = ($sale['status'] === 'debt');
+                                          $payLabel = $isDebt ? 'Pay Now' : 'Settle Balance';
+                                          $payTitle = $isDebt ? 'Pay this unpaid transaction' : 'Settle the remaining balance';
+                                          $payIcon = $isDebt ? 'fa-credit-card' : 'fa-wallet';
+                                        ?>
                                         <a href="payment.php?sale_id=<?php echo $sale['id']; ?>" 
-                                           class="btn btn-sm btn-outline-success" 
-                                           title="Record Payment">
-                                            <i class="fas fa-money-bill-wave"></i>
+                                           class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center gap-1"
+                                           data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo $payTitle; ?>">
+                                            <i class="fas <?php echo $payIcon; ?>"></i> <?php echo $payLabel; ?>
                                         </a>
                                         <?php endif; ?>
+                                        <a href="view.php?id=<?php echo $sale['id']; ?>" 
+                                           class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1"
+                                           data-bs-toggle="tooltip" data-bs-placement="top" title="View">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1 print-receipt"
+                                                data-id="<?php echo $sale['id']; ?>"
+                                                data-bs-toggle="tooltip" data-bs-placement="top" title="Print Receipt">
+                                            <i class="fas fa-print"></i> Print
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -154,57 +152,28 @@ if (is_object($sales) && method_exists($sales, 'fetch')) {
     </div>
 </div>
 
-<!-- Print Receipt Modal -->
-<div class="modal fade" id="printReceiptModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Print Receipt</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="receiptContent">
-                <!-- Receipt content will be loaded here via AJAX -->
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Loading receipt...</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="window.print()">
-                    <i class="fas fa-print me-1"></i> Print
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<?php require_once __DIR__ . '/../templates/footer.php'; ?>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize print receipt functionality
-    document.querySelectorAll('.print-receipt').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            const saleId = this.getAttribute('data-id');
-            const modal = new bootstrap.Modal(document.getElementById('printReceiptModal'));
-            
-            // Load receipt content via AJAX
-            fetch(`receipt.php?id=${saleId}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('receiptContent').innerHTML = html;
-                    modal.show();
-                })
-                .catch(error => {
-                    console.error('Error loading receipt:', error);
-                    document.getElementById('receiptContent').innerHTML = 
-                        '<div class="alert alert-danger">Error loading receipt. Please try again.</div>';
-                });
-        });
-    });
-});
+(function(){
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === '1') {
+      // Clear cart stored by add.php
+      localStorage.removeItem('cart');
+      // Clean the URL so it doesn't clear again on refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('success');
+      if (url.searchParams.has('tx')) url.searchParams.delete('tx');
+      window.history.replaceState({}, document.title, url.pathname + (url.search ? '?' + url.searchParams.toString() : ''));
+    }
+    // Init Bootstrap tooltips for action buttons
+    if (window.bootstrap) {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+    }
+  } catch (e) { /* ignore */ }
+})();
 </script>
-
-<?php require_once __DIR__ . '/../templates/footer.php'; ?>

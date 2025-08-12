@@ -142,10 +142,14 @@ INSERT INTO `payment_methods` (`id`, `name`, `description`, `created_at`) VALUES
 
 CREATE TABLE `payment_records` (
   `id` int(11) NOT NULL,
-  `sales_debt_id` int(11) NOT NULL,
+  `sales_transaction_id` int(11) DEFAULT NULL,
+  `sales_debt_id` int(11) DEFAULT NULL,
   `payment_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `payment_method_id` int(11) NOT NULL,
   `amount` decimal(12,2) NOT NULL,
+  `amount_tendered` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total_due` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `change_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `received_by_user_id` int(11) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -367,6 +371,7 @@ ALTER TABLE `payment_methods`
 --
 ALTER TABLE `payment_records`
   ADD PRIMARY KEY (`id`),
+  ADD KEY `sales_transaction_id` (`sales_transaction_id`),
   ADD KEY `sales_debt_id` (`sales_debt_id`),
   ADD KEY `payment_method_id` (`payment_method_id`),
   ADD KEY `received_by_user_id` (`received_by_user_id`);

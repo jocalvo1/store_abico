@@ -1,625 +1,306 @@
 <?php
+// Sales processing controller
+// Path: controller/sale/SalesController.php
 
 require_once __DIR__ . '/../../includes/database.php';
 
 class SalesController {
-    private $conn;
-    private $table = 'sales_transactions';
+    private mysqli $db;
 
-    public function __construct() {
-        $this->conn = getDBConnection();
-        
-        if ($this->conn->connect_error) {
-            die("Connection failed: " . $this->conn->connect_error);
-        }
+    public function __construct(mysqli $db)
+    {
+        $this->db = $db;
+        $this->db->set_charset('utf8mb4');
     }
-    
-    /**
-     * Process a new sale transaction
-     * @param array $saleData Array containing sale information
-     * @return array Result with success status and message/sale_id
-     */
-    public function processSale($saleData) {
-        // Start transaction
-        $this->conn->begin_transaction();
-        
+
+    public function process(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo 'Method Not Allowed';
+            return;
+        }
+
+        // Basic session check (expect user_id set by auth)
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+
+        $cartJson = $_POST['cart_json'] ?? '';
+        // Accept payment_method_id directly; fallback to payment_type (name)
+        $paymentMethodId = isset($_POST['payment_method_id']) && $_POST['payment_method_id'] !== '' ? (int)$_POST['payment_method_id'] : null;
+        $paymentType = trim($_POST['payment_type'] ?? ''); // name fallback from UI
+        $amountPaid = (float)($_POST['amount_paid'] ?? 0);
+        $tenderedAmount = $amountPaid; // preserve original tendered before any adjustments
+        $payLater = isset($_POST['pay_later']) && (string)$_POST['pay_later'] === '1' ? 1 : 0;
+        $customerId = isset($_POST['customer_id']) && $_POST['customer_id'] !== '' ? (int)$_POST['customer_id'] : null;
+        $notes = trim($_POST['notes'] ?? '');
+
+        $errors = [];
+        if (!$cartJson) $errors[] = 'Missing cart data';
+        if ($paymentMethodId === null && $paymentType === '') $errors[] = 'Missing payment method';
+        $cart = json_decode($cartJson, true);
+        if (!is_array($cart) || empty($cart)) $errors[] = 'Cart is empty';
+        if (!empty($errors)) { $this->fail($errors); return; }
+
+        // Resolve payment method id by name if needed
+        if ($paymentMethodId === null && $paymentType !== '') {
+            $stmtPm = $this->db->prepare('SELECT id FROM payment_methods WHERE name = ?');
+            if ($stmtPm) {
+                $stmtPm->bind_param('s', $paymentType);
+                $stmtPm->execute();
+                $resPm = $stmtPm->get_result();
+                if ($rowPm = $resPm->fetch_assoc()) $paymentMethodId = (int)$rowPm['id'];
+                $resPm->free();
+                $stmtPm->close();
+            }
+        }
+        if ($paymentMethodId === null) { $this->fail(['Unknown payment method.']); return; }
+
+        // Recalculate totals and validate against stock
+        $total = 0.0;
+        $sanitizedItems = [];
+
+        // Prepare statements
+        $stmtGetItem = $this->db->prepare('SELECT id, name, unit, selling_price, current_stock FROM items WHERE id = ? FOR UPDATE');
+        if (!$stmtGetItem) { $this->fail(['Failed to prepare item query.']); return; }
+
+        $this->db->begin_transaction();
         try {
-            // Calculate total amount
-            $totalAmount = 0;
-            foreach ($saleData['items'] as $item) {
-                $totalAmount += $item['total_price'];
-            }
-            
-            // 1. Create sales transaction
-            $transactionData = [
-                'customer_id' => $saleData['customer_id'],
-                'payment_method_id' => $saleData['payment_method_id'],
-                'total_amount' => $totalAmount,
-                'status' => $saleData['status'],
-                'created_by_user_id' => $saleData['created_by_user_id'],
-                'notes' => $saleData['notes'] ?? '',
-                'transaction_date' => date('Y-m-d H:i:s')
-            ];
-            
-            // Insert sales transaction
-            $stmt = $this->conn->prepare("INSERT INTO sales_transactions 
-                (customer_id, payment_method_id, total_amount, status, created_by_user_id, notes, transaction_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?)");
-                
-            $stmt->bind_param("iidsiss", 
-                $transactionData['customer_id'],
-                $transactionData['payment_method_id'],
-                $transactionData['total_amount'],
-                $transactionData['status'],
-                $transactionData['created_by_user_id'],
-                $transactionData['notes'],
-                $transactionData['transaction_date']
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to create sales transaction: " . $stmt->error);
-            }
-            
-            $saleId = $this->conn->insert_id;
-            
-            // 2. Add sale items and update inventory
-            $itemStmt = $this->conn->prepare("INSERT INTO sales_transaction_items 
-                (sales_transaction_id, item_id, quantity, unit_price, notes)
-                VALUES (?, ?, ?, ?, ?)");
-            
-            // Update inventory and record stock movements
-            $stockStmt = $this->conn->prepare("UPDATE items SET current_stock = current_stock - ? WHERE id = ?");
-            $movementStmt = $this->conn->prepare("INSERT INTO stock_movements 
-                (item_id, movement_type, quantity, reference_type, reference_id, notes)
-                VALUES (?, 'out', ?, 'sales', ?, ?)");
-            
-            foreach ($saleData['items'] as $item) {
-                // Add sale item
-                $itemStmt->bind_param("iiids", 
-                    $saleId,
-                    $item['item_id'],
-                    $item['quantity'],
-                    $item['unit_price'],
-                    '' // notes
-                );
-                
-                if (!$itemStmt->execute()) {
-                    throw new Exception("Failed to add sale item: " . $itemStmt->error);
-                }
-                
-                // Update inventory
-                $stockStmt->bind_param("di", $item['quantity'], $item['item_id']);
-                if (!$stockStmt->execute()) {
-                    throw new Exception("Failed to update inventory: " . $stockStmt->error);
-                }
-                
-                // Record stock movement
-                $movementStmt->bind_param("idis", 
-                    $item['item_id'],
-                    $item['quantity'],
-                    $saleId,
-                    'Sale #' . $saleId
-                );
-                
-                if (!$movementStmt->execute()) {
-                    throw new Exception("Failed to record stock movement: " . $movementStmt->error);
-                }
-            }
-            
-            // 3. If this is a credit sale, create a debt record
-            if (in_array($saleData['status'], ['debt', 'partial'])) {
-                $debtData = [
-                    'sales_transaction_id' => $saleId,
-                    'customer_id' => $saleData['customer_id'],
-                    'total_amount' => $totalAmount,
-                    'amount_paid' => $saleData['amount_paid'] ?? 0,
-                    'due_date' => $saleData['due_date'] ?? date('Y-m-d', strtotime('+30 days')),
-                    'status' => $saleData['status'] === 'partial' ? 'partial' : 'unpaid',
-                    'notes' => $saleData['notes'] ?? ''
+            foreach ($cart as $row) {
+                $itemId = (int)($row['id'] ?? 0);
+                $qty = (int)($row['quantity'] ?? 0);
+                if ($itemId <= 0 || $qty <= 0) throw new Exception('Invalid cart item.');
+
+                $stmtGetItem->bind_param('i', $itemId);
+                $stmtGetItem->execute();
+                $res = $stmtGetItem->get_result();
+                $dbItem = $res->fetch_assoc();
+                $res->free();
+                if (!$dbItem) throw new Exception('Item not found: ' . $itemId);
+
+                $price = (float)$dbItem['selling_price'];
+                $stock = (int)$dbItem['current_stock'];
+                if ($qty > $stock) throw new Exception('Insufficient stock for item ID ' . $itemId);
+
+                $lineTotal = $price * $qty;
+                $total += $lineTotal;
+                $sanitizedItems[] = [
+                    'id' => (int)$dbItem['id'],
+                    'name' => $dbItem['name'],
+                    'unit' => $dbItem['unit'],
+                    'price' => $price,
+                    'quantity' => $qty,
+                    'line_total' => $lineTotal,
                 ];
-                
-                $debtStmt = $this->conn->prepare("INSERT INTO sales_debts 
-                    (sales_transaction_id, customer_id, total_amount, amount_paid, due_date, status, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    
-                $debtStmt->bind_param("iiddsss",
-                    $debtData['sales_transaction_id'],
-                    $debtData['customer_id'],
-                    $debtData['total_amount'],
-                    $debtData['amount_paid'],
-                    $debtData['due_date'],
-                    $debtData['status'],
-                    $debtData['notes']
+            }
+
+            // Determine status based on payment
+            // paid: amountPaid >= total and not pay later
+            // partial: amountPaid > 0 and < total
+            // debt: pay later or amountPaid == 0 and total > 0
+            $status = 'paid';
+            if ($payLater || $amountPaid == 0.0) {
+                $status = ($amountPaid > 0.0 ? 'partial' : 'debt');
+            }
+            if (!$payLater && $amountPaid > 0.0 && $amountPaid < $total) $status = 'partial';
+
+            // Insert into sales_transactions per schema
+            $sqlTx = 'INSERT INTO sales_transactions (customer_id, transaction_date, payment_method_id, total_amount, status, created_by_user_id, notes, created_at) VALUES (' .
+                ($customerId === null ? 'NULL' : '?') . ', NOW(), ?, ?, ?, ?, ?, NOW())';
+            $stmtTx = $this->db->prepare($sqlTx);
+            if (!$stmtTx) throw new Exception('Failed to prepare transaction insert.');
+
+            $balance = 0.0;
+            $change = 0.0;
+            if ($payLater) {
+                $balance = $total; // entire amount deferred
+                $amountPaid = 0.0;
+            } else {
+                if ($amountPaid < $total) {
+                    $balance = $total - $amountPaid;
+                    $change = 0.0;
+                } else {
+                    $balance = 0.0;
+                    $change = $amountPaid - $total;
+                }
+            }
+
+            if ($customerId === null) {
+                $stmtTx->bind_param(
+                    'idsis',
+                    $paymentMethodId,
+                    $total,
+                    $status,
+                    $userId,
+                    $notes
                 );
-                
-                if (!$debtStmt->execute()) {
-                    throw new Exception("Failed to create debt record: " . $debtStmt->error);
+            } else {
+                $stmtTx->bind_param(
+                    'iidsis',
+                    $customerId,
+                    $paymentMethodId,
+                    $total,
+                    $status,
+                    $userId,
+                    $notes
+                );
+            }
+            if (!$stmtTx->execute()) throw new Exception('Failed to insert sales transaction.');
+
+            $transactionId = $stmtTx->insert_id;
+            $stmtTx->close();
+
+            // Record payment for fully-paid sales (no debt). Use applied amount (exclude change)
+            if (!$payLater && $tenderedAmount > 0.0 && $tenderedAmount >= $total) {
+                $appliedAmount = min($tenderedAmount, $total);
+                $changeAmount = max($tenderedAmount - $total, 0.0);
+                $stmtPayFull = $this->db->prepare('INSERT INTO payment_records (sales_transaction_id, payment_date, payment_method_id, amount, amount_tendered, total_due, change_amount, received_by_user_id, notes, created_at) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, NOW())');
+                if (!$stmtPayFull) throw new Exception('Failed to prepare full payment record insert.');
+                $stmtPayFull->bind_param('iiddddis', $transactionId, $paymentMethodId, $appliedAmount, $tenderedAmount, $total, $changeAmount, $userId, $notes);
+                if (!$stmtPayFull->execute()) throw new Exception('Failed to insert full payment record.');
+                $stmtPayFull->close();
+            }
+
+            // Insert items and update stock + stock movement
+            $stmtItem = $this->db->prepare('INSERT INTO sales_transaction_items (sales_transaction_id, item_id, quantity, unit_price, notes) VALUES (?, ?, ?, ?, NULL)');
+            if (!$stmtItem) throw new Exception('Failed to prepare items insert.');
+
+            $stmtUpdateStock = $this->db->prepare('UPDATE items SET current_stock = current_stock - ? WHERE id = ?');
+            if (!$stmtUpdateStock) throw new Exception('Failed to prepare stock update.');
+
+            $stmtMovement = $this->db->prepare('INSERT INTO stock_movements (item_id, movement_type, quantity, reference_type, reference_id, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+            if (!$stmtMovement) throw new Exception('Failed to prepare stock movement insert.');
+
+            foreach ($sanitizedItems as $it) {
+                $itItemId = $it['id'];
+                $itQty = $it['quantity'];
+                $itPrice = $it['price'];
+
+                $stmtItem->bind_param('iiid', $transactionId, $itItemId, $itQty, $itPrice);
+                if (!$stmtItem->execute()) throw new Exception('Failed to insert transaction item.');
+
+                $stmtUpdateStock->bind_param('ii', $itQty, $itItemId);
+                if (!$stmtUpdateStock->execute()) throw new Exception('Failed to update stock.');
+
+                $movementType = 'out';
+                $refType = 'sales';
+                $noteStr = 'Sale TX #' . $transactionId;
+                $stmtMovement->bind_param('isisis', $itItemId, $movementType, $itQty, $refType, $transactionId, $noteStr);
+                if (!$stmtMovement->execute()) throw new Exception('Failed to insert stock movement.');
+            }
+
+            // Create sales_debt record if applicable
+            $insertedDebtId = null;
+            if ($payLater || ($amountPaid > 0.0 && $amountPaid < $total) || ($amountPaid == 0.0 && $total > 0.0)) {
+                if (!$customerId) throw new Exception('A customer is required for pay-later or outstanding balance.');
+                $stmtDebt = $this->db->prepare('INSERT INTO sales_debts (sales_transaction_id, customer_id, total_amount, amount_paid, due_date, status, notes, created_at, updated_at) VALUES (?, ?, ?, ?, NULL, ?, ?, NOW(), NOW())');
+                if (!$stmtDebt) throw new Exception('Failed to prepare debt insert.');
+                $debtStatus = 'unpaid';
+                if ($amountPaid > 0.0 && $amountPaid < $total) $debtStatus = 'partial';
+                if ($amountPaid >= $total) $debtStatus = 'paid';
+                $stmtDebt->bind_param('iiddss', $transactionId, $customerId, $total, $amountPaid, $debtStatus, $notes);
+                if (!$stmtDebt->execute()) throw new Exception('Failed to insert debt record.');
+                $insertedDebtId = $this->db->insert_id;
+                $stmtDebt->close();
+
+                // If there was a payment made towards the debt (partial payment at sale time), record it
+                if ($amountPaid > 0.0 && $amountPaid <= $total) {
+                    $appliedAmountDebt = min($amountPaid, $total);
+                    $stmtPay = $this->db->prepare('INSERT INTO payment_records (sales_debt_id, payment_date, payment_method_id, amount, amount_tendered, total_due, change_amount, received_by_user_id, notes, created_at) VALUES (?, NOW(), ?, ?, ?, ?, 0.00, ?, ?, NOW())');
+                    if (!$stmtPay) throw new Exception('Failed to prepare payment record insert.');
+                    $stmtPay->bind_param('iidddis', $insertedDebtId, $paymentMethodId, $appliedAmountDebt, $tenderedAmount, $total, $userId, $notes);
+                    if (!$stmtPay->execute()) throw new Exception('Failed to insert payment record.');
+                    $stmtPay->close();
                 }
-                
-                // If this was a partial payment, record the payment
-                if ($saleData['status'] === 'partial' && $debtData['amount_paid'] > 0) {
-                    $paymentData = [
-                        'sales_debt_id' => $this->conn->insert_id,
-                        'payment_date' => date('Y-m-d H:i:s'),
-                        'payment_method_id' => $saleData['payment_method_id'],
-                        'amount' => $debtData['amount_paid'],
-                        'received_by_user_id' => $saleData['created_by_user_id'],
-                        'notes' => 'Initial partial payment',
-                        'created_at' => date('Y-m-d H:i:s')
-                    ];
-                    
-                    $paymentStmt = $this->conn->prepare("INSERT INTO payment_records 
-                        (sales_debt_id, payment_date, payment_method_id, amount, received_by_user_id, notes, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)");
-                        
-                    $paymentStmt->bind_param("isidiis",
-                        $paymentData['sales_debt_id'],
-                        $paymentData['payment_date'],
-                        $paymentData['payment_method_id'],
-                        $paymentData['amount'],
-                        $paymentData['received_by_user_id'],
-                        $paymentData['notes'],
-                        $paymentData['created_at']
-                    );
-                    
-                    if (!$paymentStmt->execute()) {
-                        throw new Exception("Failed to record payment: " . $paymentStmt->error);
-                    }
-                }
             }
-            
-            // Commit transaction
-            $this->conn->commit();
-            
-            return [
-                'success' => true,
-                'sale_id' => $saleId,
-                'message' => 'Sale processed successfully.'
-            ];
-            
-        } catch (Exception $e) {
-            // Rollback transaction on error
-            $this->conn->rollback();
-            error_log("Sale processing error: " . $e->getMessage());
-            
-            return [
-                'success' => false,
-                'message' => $e->getMessage()
-            ];
+
+            $stmtItem->close();
+            $stmtUpdateStock->close();
+            $stmtMovement->close();
+
+            $this->db->commit();
+
+            // Redirect to sales index with success (host-agnostic, correct TX id)
+            $txId = $transactionId;
+            header('Location: ../../sales/index.php?success=1&tx=' . $txId);
+            exit;
+        } catch (Exception $ex) {
+            $this->db->rollback();
+            $this->fail(['Failed to process sale: ' . $ex->getMessage()]);
+            return;
+        } finally {
+            if (isset($stmtGetItem) && $stmtGetItem) $stmtGetItem->close();
         }
     }
 
-    // Get all sales transactions
-    public function getAll() {
-        $query = 'SELECT st.*, c.name as customer_name, pm.name as payment_method_name, u.name as created_by_name 
-                 FROM ' . $this->table . ' st 
-                 LEFT JOIN customers c ON st.customer_id = c.id 
-                 LEFT JOIN payment_methods pm ON st.payment_method_id = pm.id 
-                 LEFT JOIN users u ON st.created_by_user_id = u.id 
-                 ORDER BY st.transaction_date DESC';
-        
-        $result = $this->conn->query($query);
-        
-        if ($result === false) {
-            error_log("Error in getAll(): " . $this->conn->error);
-            return $this->createEmptyResult();
-        }
-        
-        return $this->createResultObject($result);
-    }
-
-    // Search sales transactions
-    public function search($searchTerm) {
-        $searchTerm = $this->conn->real_escape_string($searchTerm);
-        
-        $query = "SELECT st.*, c.name as customer_name, pm.name as payment_method_name, u.name as created_by_name 
-                 FROM " . $this->table . " st 
-                 LEFT JOIN customers c ON st.customer_id = c.id 
-                 LEFT JOIN payment_methods pm ON st.payment_method_id = pm.id 
-                 LEFT JOIN users u ON st.created_by_user_id = u.id 
-                 WHERE st.id LIKE '%$searchTerm%' 
-                 OR c.name LIKE '%$searchTerm%' 
-                 OR pm.name LIKE '%$searchTerm%' 
-                 OR st.notes LIKE '%$searchTerm%' 
-                 ORDER BY st.transaction_date DESC";
-        
-        $result = $this->conn->query($query);
-        
-        if ($result === false) {
-            error_log("Error in search(): " . $this->conn->error);
-            return $this->createEmptyResult();
-        }
-        
-        return $this->createResultObject($result);
-    }
-
-    // Get a single sale by ID
-    public function getById($id) {
-        $id = (int)$this->conn->real_escape_string($id);
-        
-        $query = 'SELECT st.*, c.name as customer_name, c.contact, c.address, 
-                 pm.name as payment_method_name, u.name as created_by_name 
-                 FROM ' . $this->table . ' st 
-                 LEFT JOIN customers c ON st.customer_id = c.id 
-                 LEFT JOIN payment_methods pm ON st.payment_method_id = pm.id 
-                 LEFT JOIN users u ON st.created_by_user_id = u.id 
-                 WHERE st.id = ' . $id;
-        
-        $result = $this->conn->query($query);
-        
-        if ($result === false || $result->num_rows === 0) {
-            return null;
-        }
-        
-        return $result->fetch_assoc();
-    }
-
-    // Get sale items
-    public function getSaleItems($saleId) {
-        $saleId = (int)$this->conn->real_escape_string($saleId);
-        
-        $query = 'SELECT sti.*, i.name as item_name, i.sku, i.unit 
-                 FROM sales_transaction_items sti 
-                 JOIN items i ON sti.item_id = i.id 
-                 WHERE sti.sales_transaction_id = ' . $saleId;
-        
-        $result = $this->conn->query($query);
-        
-        if ($result === false) {
-            return [];
-        }
-        
-        $items = [];
-        while ($row = $result->fetch_assoc()) {
-            $items[] = $row;
-        }
-        
-        return $items;
-    }
-
-    // Create a new sale
-    public function create($data) {
-        $this->conn->begin_transaction();
-        
-        try {
-            // Insert sale transaction
-            $query = 'INSERT INTO ' . $this->table . ' 
-                     (customer_id, payment_method_id, total_amount, status, created_by_user_id, notes) 
-                     VALUES (?, ?, ?, ?, ?, ?)';
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->bind_param(
-                'iidsis', 
-                $data['customer_id'],
-                $data['payment_method_id'],
-                $data['total_amount'],
-                $data['status'],
-                $data['created_by_user_id'],
-                $data['notes']
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Error creating sale: " . $stmt->error);
-            }
-            
-            $saleId = $this->conn->insert_id;
-            
-            // Insert sale items
-            foreach ($data['items'] as $item) {
-                $this->addSaleItem($saleId, $item);
-                
-                // Update inventory
-                $this->updateInventory($item['item_id'], -$item['quantity']);
-            }
-            
-            // If it's a credit sale, create a debt record
-            if ($data['status'] === 'debt') {
-                $this->createDebt($saleId, $data);
-            }
-            
-            $this->conn->commit();
-            return $saleId;
-            
-        } catch (Exception $e) {
-            $this->conn->rollback();
-            error_log($e->getMessage());
-            return false;
-        }
-    }
-
-    // Add sale item
-    private function addSaleItem($saleId, $item) {
-        $query = 'INSERT INTO sales_transaction_items 
-                 (sales_transaction_id, item_id, quantity, unit_price, notes) 
-                 VALUES (?, ?, ?, ?, ?)';
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param(
-            'iiids', 
-            $saleId,
-            $item['item_id'],
-            $item['quantity'],
-            $item['unit_price'],
-            $item['notes'] ?? ''
-        );
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Error adding sale item: " . $stmt->error);
-        }
-        
-        return $this->conn->insert_id;
-    }
-
-    // Update inventory
-    private function updateInventory($itemId, $quantity) {
-        $query = 'UPDATE items SET current_stock = current_stock + ? WHERE id = ?';
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param('ii', $quantity, $itemId);
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Error updating inventory: " . $stmt->error);
-        }
-    }
-
-    // Create debt record
-    private function createDebt($saleId, $data) {
-        $query = 'INSERT INTO sales_debts 
-                 (sales_transaction_id, customer_id, total_amount, due_date, status) 
-                 VALUES (?, ?, ?, DATE_ADD(CURDATE(), INTERVAL 30 DAY), ?)';
-        
-        $status = 'unpaid';
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param(
-            'iids', 
-            $saleId,
-            $data['customer_id'],
-            $data['total_amount'],
-            $status
-        );
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Error creating debt record: " . $stmt->error);
-        }
-    }
-
-    // Helper method to create empty result object
-    private function createEmptyResult() {
-        return new class {
-            public function fetch() { return false; }
-            public function rowCount() { return 0; }
-        };
-    }
-
-    // Helper method to create result object from query
-    private function createResultObject($result) {
+    /**
+     * Return recent sales for listing
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAll(int $limit = 100): array
+    {
+        $sql = "SELECT st.id, st.transaction_date, st.total_amount, st.status,
+                       COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+                       pm.name AS payment_method_name
+                FROM sales_transactions st
+                LEFT JOIN customers c ON c.id = st.customer_id
+                LEFT JOIN payment_methods pm ON pm.id = st.payment_method_id
+                ORDER BY st.transaction_date DESC
+                LIMIT ?";
+        $stmt = $this->db->prepare($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param('i', $limit);
+        $stmt->execute();
+        $res = $stmt->get_result();
         $rows = [];
-        while ($row = $result->fetch_assoc()) {
+        while ($row = $res->fetch_assoc()) {
             $rows[] = $row;
         }
-        
-        return new class($rows) {
-            private $rows;
-            private $position = 0;
-            
-            public function __construct($rows) {
-                $this->rows = $rows;
-            }
-            
-            public function fetch() {
-                return $this->rows[$this->position++] ?? false;
-            }
-            
-            public function rowCount() {
-                return count($this->rows);
-            }
-        };
+        $res->free();
+        $stmt->close();
+        return $rows;
     }
 
-    // Get payment methods
-    public function getPaymentMethods() {
-        $query = 'SELECT * FROM payment_methods ORDER BY name';
-        $result = $this->conn->query($query);
-        
-        if ($result === false) {
-            error_log("Error in getPaymentMethods(): " . $this->conn->error);
-            return $this->createEmptyResult();
+    /**
+     * Search sales by customer name, payment method name, or ID
+     * @param string $term
+     * @return array<int, array<string, mixed>>
+     */
+    public function search(string $term): array
+    {
+        $like = '%' . $this->db->real_escape_string($term) . '%';
+        $maybeId = ctype_digit($term) ? (int)$term : 0;
+        $sql = "SELECT st.id, st.transaction_date, st.total_amount, st.status,
+                       COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+                       pm.name AS payment_method_name
+                FROM sales_transactions st
+                LEFT JOIN customers c ON c.id = st.customer_id
+                LEFT JOIN payment_methods pm ON pm.id = st.payment_method_id
+                WHERE c.name LIKE ? OR pm.name LIKE ? OR st.id = ?
+                ORDER BY st.transaction_date DESC
+                LIMIT 200";
+        $stmt = $this->db->prepare($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param('ssi', $like, $like, $maybeId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = [];
+        while ($row = $res->fetch_assoc()) {
+            $rows[] = $row;
         }
-        
-        return $this->createResultObject($result);
+        $res->free();
+        $stmt->close();
+        return $rows;
     }
-    
-    // Get all customers
-    public function getAllCustomers() {
-        $query = 'SELECT * FROM customers ORDER BY name';
-        $result = $this->conn->query($query);
-        
-        if ($result === false) {
-            error_log("Error in getAllCustomers(): " . $this->conn->error);
-            return $this->createEmptyResult();
-        }
-        
-        return $this->createResultObject($result);
-    }
-    
-    // Get all items
-    public function getAllItems() {
-        $query = 'SELECT * FROM items WHERE current_stock > 0 ORDER BY name';
-        $result = $this->conn->query($query);
-        
-        if ($result === false) {
-            error_log("Error in getAllItems(): " . $this->conn->error);
-            return $this->createEmptyResult();
-        }
-        
-        return $this->createResultObject($result);
-    }
-    
-    // Get debt by sale ID
-    public function getDebtBySaleId($saleId) {
-        $saleId = (int)$this->conn->real_escape_string($saleId);
-        
-        $query = 'SELECT sd.*, c.name as customer_name, c.contact, c.address, 
-                 st.total_amount as sale_total, st.payment_method_id, st.status as sale_status,
-                 (SELECT COALESCE(SUM(amount), 0) FROM payment_records WHERE sales_debt_id = sd.id) as amount_paid
-                 FROM sales_debts sd
-                 JOIN sales_transactions st ON sd.sales_transaction_id = st.id
-                 LEFT JOIN customers c ON sd.customer_id = c.id
-                 WHERE sd.sales_transaction_id = ' . $saleId;
-        
-        $result = $this->conn->query($query);
-        
-        if ($result === false || $result->num_rows === 0) {
-            return null;
-        }
-        
-        $debt = $result->fetch_assoc();
-        $debt['balance_due'] = $debt['total_amount'] - $debt['amount_paid'];
-        
-        return $debt;
-    }
-    
-    // Get payment history for a debt
-    public function getPaymentHistory($debtId) {
-        $debtId = (int)$this->conn->real_escape_string($debtId);
-        
-        $query = 'SELECT pr.*, pm.name as payment_method_name, u.name as received_by_name
-                 FROM payment_records pr
-                 JOIN payment_methods pm ON pr.payment_method_id = pm.id
-                 JOIN users u ON pr.received_by_user_id = u.id
-                 WHERE pr.sales_debt_id = ' . $debtId . '
-                 ORDER BY pr.payment_date DESC, pr.created_at DESC';
-        
-        $result = $this->conn->query($query);
-        
-        if ($result === false) {
-            return [];
-        }
-        
-        $payments = [];
-        while ($row = $result->fetch_assoc()) {
-            $payments[] = $row;
-        }
-        
-        return $payments;
-    }
-    
-    // Record a payment
-    public function recordPayment($data) {
-        $this->conn->begin_transaction();
-        
-        try {
-            // Insert payment record
-            $query = 'INSERT INTO payment_records 
-                     (sales_debt_id, payment_date, payment_method_id, amount, received_by_user_id, notes) 
-                     VALUES (?, ?, ?, ?, ?, ?)';
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->bind_param(
-                'isidis', 
-                $data['sales_debt_id'],
-                $data['payment_date'],
-                $data['payment_method_id'],
-                $data['amount'],
-                $data['received_by_user_id'],
-                $data['notes']
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Error recording payment: " . $stmt->error);
-            }
-            
-            // Get the debt details
-            $debtQuery = 'SELECT sd.*, st.status as sale_status,
-                         (SELECT COALESCE(SUM(amount), 0) FROM payment_records WHERE sales_debt_id = sd.id) as total_paid
-                         FROM sales_debts sd
-                         JOIN sales_transactions st ON sd.sales_transaction_id = st.id
-                         WHERE sd.id = ' . $data['sales_debt_id'];
-            
-            $debtResult = $this->conn->query($debtQuery);
-            if ($debtResult === false || $debtResult->num_rows === 0) {
-                throw new Exception("Debt record not found");
-            }
-            
-            $debt = $debtResult->fetch_assoc();
-            $newTotalPaid = $debt['total_paid'] + $data['amount'];
-            $balance = $debt['total_amount'] - $newTotalPaid;
-            
-            // Update debt status
-            $newStatus = ($balance <= 0) ? 'paid' : 'partial';
-            
-            $updateDebtQuery = 'UPDATE sales_debts SET status = ? WHERE id = ?';
-            $stmt = $this->conn->prepare($updateDebtQuery);
-            $stmt->bind_param('si', $newStatus, $data['sales_debt_id']);
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Error updating debt status: " . $stmt->error);
-            }
-            
-            // Update sale status
-            $updateSaleQuery = 'UPDATE sales_transactions SET status = ? WHERE id = ?';
-            $stmt = $this->conn->prepare($updateSaleQuery);
-            $stmt->bind_param('si', $newStatus, $debt['sales_transaction_id']);
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Error updating sale status: " . $stmt->error);
-            }
-            
-            // If this was a check payment, record it in check_exchanges
-            if ($data['payment_method_id'] == 3) { // Assuming 3 is the ID for check payments
-                $this->recordCheckPayment($data, $debt);
-            }
-            
-            $this->conn->commit();
-            return true;
-            
-        } catch (Exception $e) {
-            $this->conn->rollback();
-            error_log($e->getMessage());
-            return false;
-        }
-    }
-    
-    // Record a check payment
-    private function recordCheckPayment($paymentData, $debt) {
-        // This is a simplified version - you might need to collect more check details in your form
-        $query = 'INSERT INTO check_exchanges 
-                 (customer_id, check_number, bank_name, check_date, amount, status, received_by_user_id, notes)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-        
-        $stmt = $this->conn->prepare($query);
-        
-        // Default values - you should collect these from a form in a real application
-        $checkNumber = 'CHK' . time();
-        $bankName = 'Unknown Bank';
-        $checkDate = date('Y-m-d');
-        $status = 'pending';
-        $notes = 'Payment for Invoice #' . str_pad($debt['sales_transaction_id'], 6, '0', STR_PAD_LEFT);
-        
-        $stmt->bind_param(
-            'isssdsis',
-            $debt['customer_id'],
-            $checkNumber,
-            $bankName,
-            $checkDate,
-            $paymentData['amount'],
-            $status,
-            $paymentData['received_by_user_id'],
-            $notes
-        );
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Error recording check payment: " . $stmt->error);
-        }
-        
-        return $this->conn->insert_id;
-    }
-    
-    // Close connection
-    public function __destruct() {
-        if ($this->conn) {
-            $this->conn->close();
-        }
+
+    private function fail(array $errors): void
+    {
+        // You can adapt this to set session flash and redirect back
+        // For now, show a simple error page
+        http_response_code(400);
+        echo '<h3>Sale could not be processed</h3>';
+        echo '<ul>';
+        foreach ($errors as $err) echo '<li>' . htmlspecialchars($err) . '</li>';
+        echo '</ul>';
     }
 }

@@ -109,8 +109,24 @@ require_once __DIR__ . '/../../templates/header.php';
                                     <option value="" disabled selected>Select a category</option>
                                     <option value="Electronics" <?php echo $product['category'] === 'Electronics' ? 'selected' : ''; ?>>Electronics</option>
                                     <option value="Clothing" <?php echo $product['category'] === 'Clothing' ? 'selected' : ''; ?>>Clothing</option>
+                                    <option value="Beauty" <?php echo $product['category'] === 'Beauty' ? 'selected' : ''; ?>>Beauty</option>
+                                    <option value="Health" <?php echo $product['category'] === 'Health' ? 'selected' : ''; ?>>Health</option>
+                                    <option value="Pharmacy" <?php echo $product['category'] === 'Pharmacy' ? 'selected' : ''; ?>>Pharmacy</option>
                                     <option value="Food" <?php echo $product['category'] === 'Food' ? 'selected' : ''; ?>>Food</option>
                                     <option value="Beverages" <?php echo $product['category'] === 'Beverages' ? 'selected' : ''; ?>>Beverages</option>
+                                    <option value="Snacks" <?php echo $product['category'] === 'Snacks' ? 'selected' : ''; ?>>Snacks</option>
+                                    <option value="Drinks" <?php echo $product['category'] === 'Drinks' ? 'selected' : ''; ?>>Drinks</option>
+                                    <option value="Bakery" <?php echo $product['category'] === 'Bakery' ? 'selected' : ''; ?>>Bakery</option>
+                                    <option value="Dairy" <?php echo $product['category'] === 'Dairy' ? 'selected' : ''; ?>>Dairy</option>
+                                    <option value="Frozen" <?php echo $product['category'] === 'Frozen' ? 'selected' : ''; ?>>Frozen</option>
+                                    <option value="Produce" <?php echo $product['category'] === 'Produce' ? 'selected' : ''; ?>>Produce</option>
+                                    <option value="Meat" <?php echo $product['category'] === 'Meat' ? 'selected' : ''; ?>>Meat</option>
+                                    <option value="Seafood" <?php echo $product['category'] === 'Seafood' ? 'selected' : ''; ?>>Seafood</option>
+                                    <option value="Household" <?php echo $product['category'] === 'Household' ? 'selected' : ''; ?>>Household</option>
+                                    <option value="Cleaning" <?php echo $product['category'] === 'Cleaning' ? 'selected' : ''; ?>>Cleaning</option>
+                                    <option value="Hardware" <?php echo $product['category'] === 'Hardware' ? 'selected' : ''; ?>>Hardware</option>
+                                    <option value="Automotive" <?php echo $product['category'] === 'Automotive' ? 'selected' : ''; ?>>Automotive</option>
+                                    <option value="Office" <?php echo $product['category'] === 'Office' ? 'selected' : ''; ?>>Office</option>
                                     <option value="Other">Other (please specify)</option>
                                 </select>
                                 <div id="category_other_container" class="mt-2" style="display: none;">
@@ -147,14 +163,33 @@ require_once __DIR__ . '/../../templates/header.php';
                                             <option value="pcs" <?php echo $product['unit'] === 'pcs' ? 'selected' : ''; ?>>Pieces (pcs)</option>
                                             <option value="box" <?php echo $product['unit'] === 'box' ? 'selected' : ''; ?>>Boxes (box)</option>
                                             <option value="pack" <?php echo $product['unit'] === 'pack' ? 'selected' : ''; ?>>Packs (pack)</option>
+                                            <option value="bottle" <?php echo $product['unit'] === 'bottle' ? 'selected' : ''; ?>>Bottle</option>
+                                            <option value="can" <?php echo $product['unit'] === 'can' ? 'selected' : ''; ?>>Can</option>
+                                            <option value="sachet" <?php echo $product['unit'] === 'sachet' ? 'selected' : ''; ?>>Sachet</option>
+                                            <option value="tray" <?php echo $product['unit'] === 'tray' ? 'selected' : ''; ?>>Tray</option>
+                                            <option value="bag" <?php echo $product['unit'] === 'bag' ? 'selected' : ''; ?>>Bag</option>
+                                            <option value="roll" <?php echo $product['unit'] === 'roll' ? 'selected' : ''; ?>>Roll</option>
+                                            <option value="set" <?php echo $product['unit'] === 'set' ? 'selected' : ''; ?>>Set</option>
+                                            <option value="pair" <?php echo $product['unit'] === 'pair' ? 'selected' : ''; ?>>Pair</option>
+                                            <option value="dozen" <?php echo $product['unit'] === 'dozen' ? 'selected' : ''; ?>>Dozen</option>
                                         </optgroup>
                                         <optgroup label="Weight">
                                             <option value="kg" <?php echo $product['unit'] === 'kg' ? 'selected' : ''; ?>>Kilograms (kg)</option>
                                             <option value="g" <?php echo $product['unit'] === 'g' ? 'selected' : ''; ?>>Grams (g)</option>
+                                            <option value="lb" <?php echo $product['unit'] === 'lb' ? 'selected' : ''; ?>>Pounds (lb)</option>
+                                            <option value="oz" <?php echo $product['unit'] === 'oz' ? 'selected' : ''; ?>>Ounces (oz)</option>
                                         </optgroup>
                                         <optgroup label="Volume">
                                             <option value="L" <?php echo $product['unit'] === 'L' ? 'selected' : ''; ?>>Liters (L)</option>
-                                            <option value="ml" <?php echo $product['unit'] === 'ml' ? 'selected' : ''; ?>>Milliliters (ml)</option>
+                                            <option value="mL" <?php echo $product['unit'] === 'mL' ? 'selected' : ''; ?>>Milliliters (mL)</option>
+                                            <option value="gal" <?php echo $product['unit'] === 'gal' ? 'selected' : ''; ?>>Gallons (gal)</option>
+                                        </optgroup>
+                                        <optgroup label="Length/Size">
+                                            <option value="m" <?php echo $product['unit'] === 'm' ? 'selected' : ''; ?>>Meters (m)</option>
+                                            <option value="cm" <?php echo $product['unit'] === 'cm' ? 'selected' : ''; ?>>Centimeters (cm)</option>
+                                            <option value="mm" <?php echo $product['unit'] === 'mm' ? 'selected' : ''; ?>>Millimeters (mm)</option>
+                                            <option value="in" <?php echo $product['unit'] === 'in' ? 'selected' : ''; ?>>Inches (in)</option>
+                                            <option value="ft" <?php echo $product['unit'] === 'ft' ? 'selected' : ''; ?>>Feet (ft)</option>
                                         </optgroup>
                                         <option value="Other">Other (specify)</option>
                                     </select>

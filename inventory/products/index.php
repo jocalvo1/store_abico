@@ -72,20 +72,6 @@ unset($_SESSION['success'], $_SESSION['error']);
         </div>
     </div>
 
-    <?php if ($successMessage): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?php echo htmlspecialchars($successMessage); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if ($errorMessage): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php echo htmlspecialchars($errorMessage); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
     <div class="card border-0 shadow-sm" data-aos="fade-up" data-aos-delay="100">
         <div class="card-header bg-white border-0 py-3">
             <div class="d-flex justify-content-between align-items-center">
@@ -143,8 +129,8 @@ unset($_SESSION['success'], $_SESSION['error']);
                                     <td class="text-center text-muted"><?php echo $rowNumber++; ?></td>
                                     <td>
                                         <div class="fw-bold"><?php echo htmlspecialchars($product['name']); ?></div>
-                                        <div class="small text-muted">SKU: <?php echo htmlspecialchars($product['sku'] ?? 'N/A'); ?></div>
                                     </td>
+
                                     <td class="text-muted">
                                         <?php 
                                         $description = $product['description'];

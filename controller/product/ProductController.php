@@ -9,7 +9,7 @@ class ProductController {
     }
 
     public function getAll() {
-        $sql = "SELECT id, name, description, category, unit, current_stock, selling_price 
+        $sql = "SELECT id, name, description, category, unit, current_stock, reorder_level, selling_price 
                 FROM items 
                 ORDER BY name ASC";
         return $this->conn->query($sql);
@@ -17,12 +17,12 @@ class ProductController {
 
     public function search($searchTerm) {
         $search = "%$searchTerm%";
-        $sql = "SELECT id, name, description, category, unit, current_stock, selling_price 
+        $sql = "SELECT id, name, description, category, unit, current_stock, reorder_level, selling_price 
                 FROM items 
-                WHERE name LIKE ? OR description LIKE ? OR category LIKE ? OR sku = ?
+                WHERE name LIKE ? OR description LIKE ? OR category LIKE ?
                 ORDER BY name ASC";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ssss", $search, $search, $search, $searchTerm);
+        $stmt->bind_param("sss", $search, $search, $search);
         $stmt->execute();
         return $stmt->get_result();
     }
@@ -37,12 +37,12 @@ class ProductController {
     }
 
     public function create($data) {
+        // Explicitly set SKU to NULL to be compatible with schemas where SKU might be NOT NULL without a default
         $sql = "INSERT INTO items (name, sku, description, category, unit, current_stock, reorder_level, selling_price) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                VALUES (?, NULL, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sssssiid", 
+        $stmt->bind_param("ssssddd", 
             $data['name'], 
-            $data['sku'], 
             $data['description'], 
             $data['category'], 
             $data['unit'], 
@@ -54,15 +54,15 @@ class ProductController {
     }
 
     public function update($id, $data) {
+        // Explicitly set SKU to NULL to reflect temporary removal
         $sql = "UPDATE items 
-                SET name = ?, sku = ?, description = ?, category = ?, 
+                SET name = ?, sku = NULL, description = ?, category = ?, 
                     unit = ?, current_stock = ?, reorder_level = ?, 
                     selling_price = ?, updated_at = NOW() 
                 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sssssiidi", 
+        $stmt->bind_param("ssssdddi", 
             $data['name'], 
-            $data['sku'], 
             $data['description'], 
             $data['category'], 
             $data['unit'], 
