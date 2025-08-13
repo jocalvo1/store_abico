@@ -134,12 +134,11 @@ $salesArray = !empty($searchTerm)
                                            data-bs-toggle="tooltip" data-bs-placement="top" title="View">
                                             <i class="fas fa-eye"></i> View
                                         </a>
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1 print-receipt"
-                                                data-id="<?php echo $sale['id']; ?>"
-                                                data-bs-toggle="tooltip" data-bs-placement="top" title="Print Receipt">
+                                        <a href="receipt.php?id=<?php echo $sale['id']; ?>&print=1" target="_blank"
+                                           class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1"
+                                           data-bs-toggle="tooltip" data-bs-placement="top" title="Print Receipt">
                                             <i class="fas fa-print"></i> Print
-                                        </button>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

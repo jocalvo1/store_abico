@@ -180,7 +180,7 @@ require_once __DIR__ . '/../templates/header.php';
 // Include footer
 require_once __DIR__ . '/../templates/footer.php'; 
 ?> -->
-
+DASHBOARD
 Inventory 
  <!-- - Products -->
  <!-- - Stock Movements -->
@@ -188,8 +188,8 @@ Purchase Orders
  - Purchase Order List
  - Deliveries
 Sales
- - Sales Transaction
- - Create New Sale
+ <!-- - Sales Transaction -->
+ <!-- - Create New Sale -->
 Ledger
  - Customers
  - Suppliers

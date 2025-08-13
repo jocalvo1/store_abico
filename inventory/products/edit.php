@@ -129,8 +129,8 @@ require_once __DIR__ . '/../../templates/header.php';
             <small class="text-muted"><?php echo htmlspecialchars($product['name']); ?></small>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="view.php?id=<?php echo $product_id; ?>" class="btn btn-sm btn-outline-secondary me-2">
-                <i class="fas fa-arrow-left me-1"></i> Back to Product
+            <a href="index.php" class="btn btn-sm btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-1"></i> Back to Products
             </a>
         </div>
     </div>
@@ -191,13 +191,11 @@ require_once __DIR__ . '/../../templates/header.php';
                                 </label>
                                 <input type="number" step="0.01" class="form-control" id="current_stock" 
                                        name="current_stock" value="<?php echo $product['current_stock']; ?>" readonly>
-                                <div class="form-text">Read-only. Adjust stock using the section below.</div>
                             </div>
                             <div class="col-md-4">
                                 <label for="reorder_level" class="form-label">Reorder Level</label>
                                 <input type="number" step="0.01" class="form-control" id="reorder_level" 
                                        name="reorder_level" value="<?php echo $product['reorder_level']; ?>">
-                                <div class="form-text">Below this level, item is considered low stock.</div>
                             </div>
                             <div class="col-md-4">
                                 <label for="selling_price" class="form-label">Selling Price <span class="text-danger">*</span></label>
@@ -206,7 +204,6 @@ require_once __DIR__ . '/../../templates/header.php';
                                     <input type="number" step="0.01" class="form-control" id="selling_price" 
                                            name="selling_price" value="<?php echo $product['selling_price']; ?>" required>
                                 </div>
-                                <div class="form-text">Customer price including VAT if applicable.</div>
                             </div>
                         </div>
 
@@ -378,6 +375,18 @@ require_once __DIR__ . '/../../templates/header.php';
         const reorderEl = document.getElementById('reorder_level');
         if (stockEl) stockEl.addEventListener('input', updateStockStatus);
         if (reorderEl) reorderEl.addEventListener('input', updateStockStatus);
+
+        // Grey out read-only/disabled fields for clarity
+        const roSelector = '#productForm input[readonly], #productForm textarea[readonly], #productForm select[disabled], #productForm input[disabled], #productForm textarea[disabled]';
+        const roEls = document.querySelectorAll(roSelector);
+        roEls.forEach(el => {
+            el.classList.add('bg-secondary-subtle', 'text-body');
+            el.style.cursor = 'not-allowed';
+            const ig = el.closest('.input-group');
+            if (ig) {
+                ig.querySelectorAll('.input-group-text').forEach(span => span.classList.add('bg-secondary-subtle', 'text-body'));
+            }
+        });
 
         // Update form submission: nothing needed for read-only meta fields
         const form = document.getElementById('productForm');

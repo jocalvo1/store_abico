@@ -69,7 +69,7 @@ if ($stmtIt) {
 
 // Fetch debt record if any
 $debt = null;
-$sqlDebt = "SELECT total_amount, amount_paid, due_date, status, notes
+$sqlDebt = "SELECT id, total_amount, amount_paid, due_date, status, notes
             FROM sales_debts WHERE sales_transaction_id = ? LIMIT 1";
 $stmtDebt = $db->prepare($sqlDebt);
 if ($stmtDebt) {
@@ -80,6 +80,32 @@ if ($stmtDebt) {
     $resDebt->free();
     $stmtDebt->close();
 }
+
+// Compute remaining for quick UI decisions
+$remainingBalance = 0.0;
+if ($debt) {
+    $remainingBalance = max(0.0, (float)$debt['total_amount'] - (float)$debt['amount_paid']);
+}
+
+// Fetch payment history (includes payments recorded on the sale or via its debt)
+$payments = [];
+$stmtPays = $db->prepare(
+    "SELECT pr.payment_date, pr.amount, pr.amount_tendered, pr.change_amount, pr.notes,
+            pm.name AS method_name
+     FROM payment_records pr
+     LEFT JOIN payment_methods pm ON pm.id = pr.payment_method_id
+     LEFT JOIN sales_debts sd ON sd.id = pr.sales_debt_id
+     WHERE pr.sales_transaction_id = ? OR sd.sales_transaction_id = ?
+     ORDER BY pr.payment_date ASC, pr.id ASC"
+);
+if ($stmtPays) {
+    $stmtPays->bind_param('ii', $id, $id);
+    $stmtPays->execute();
+    $resPays = $stmtPays->get_result();
+    while ($row = $resPays->fetch_assoc()) $payments[] = $row;
+    $resPays->free();
+    $stmtPays->close();
+}
 ?>
 
 <div class="container-fluid py-4">
@@ -89,8 +115,8 @@ if ($stmtDebt) {
       <div class="text-muted small">Date: <?php echo date('M d, Y h:i A', strtotime($sale['transaction_date'])); ?></div>
     </div>
     <div class="d-flex gap-2">
-      <a href="index.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i> Back</a>
-      <button type="button" class="btn btn-primary" onclick="window.print()"><i class="fas fa-print me-1"></i> Print</button>
+      <a href="index.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
+      <a href="receipt.php?id=<?php echo (int)$sale['id']; ?>&print=1" target="_blank" class="btn btn-primary btn-sm"><i class="fas fa-receipt me-1"></i> Print Receipt</a>
     </div>
   </div>
 
@@ -179,12 +205,19 @@ if ($stmtDebt) {
           </div>
           <div class="mb-2 d-flex justify-content-between">
             <span class="text-muted">Remaining</span>
-            <span>₱<?php echo number_format(max(0.0, (float)$debt['total_amount'] - (float)$debt['amount_paid']), 2); ?></span>
+            <span class="fw-bold <?php echo $remainingBalance>0 ? 'text-danger' : ''; ?>">₱<?php echo number_format($remainingBalance, 2); ?></span>
           </div>
           <div class="mb-2 d-flex justify-content-between">
             <span class="text-muted">Debt Status</span>
             <span><span class="badge bg-<?php echo ($debt['status']==='paid'?'success':($debt['status']==='partial'?'warning':'danger')); ?>"><?php echo ucfirst($debt['status']); ?></span></span>
           </div>
+          <?php if ($remainingBalance > 0): ?>
+          <div class="d-grid mt-3">
+            <a href="payment.php?sale_id=<?php echo (int)$sale['id']; ?>" class="btn btn-success btn-sm">
+              <i class="fas fa-credit-card me-1"></i> Pay Now
+            </a>
+          </div>
+          <?php endif; ?>
           <?php if (!empty($debt['due_date'])): ?>
           <div class="mb-2 d-flex justify-content-between">
             <span class="text-muted">Due Date</span>
@@ -201,8 +234,68 @@ if ($stmtDebt) {
           <?php endif; ?>
         </div>
       </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="m-0">Payment History</h6>
+            <?php if ($remainingBalance > 0): ?>
+            <a href="payment.php?sale_id=<?php echo (int)$sale['id']; ?>" class="btn btn-outline-success btn-sm"><i class="fas fa-wallet me-1"></i> Settle Balance</a>
+            <?php endif; ?>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <style>
+              .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+              .truncate { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            </style>
+            <table class="table table-hover align-middle mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th class="ps-3">Date</th>
+                  <th>Method</th>
+                  <th class="text-end mono">Amount</th>
+                  <th class="text-end mono">Tendered</th>
+                  <th class="text-end mono pe-3">Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if (empty($payments)): ?>
+                <tr><td colspan="5" class="text-center py-4 text-muted">No payments recorded</td></tr>
+                <?php else: ?>
+                <?php foreach ($payments as $p): ?>
+                <tr>
+                  <td class="ps-3"><span class="text-muted small"><i class="far fa-clock me-1"></i><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($p['payment_date']))); ?></span></td>
+                  <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle"><?php echo htmlspecialchars($p['method_name'] ?? ''); ?></span></td>
+                  <td class="text-end mono">₱<?php echo number_format((float)$p['amount'], 2); ?></td>
+                  <td class="text-end mono">₱<?php echo number_format((float)$p['amount_tendered'], 2); ?></td>
+                  <td class="text-end mono pe-3">₱<?php echo number_format((float)$p['change_amount'], 2); ?></td>
+                </tr>
+                <?php if (!empty($p['notes'])): ?>
+                <tr class="bg-light-subtle">
+                  <td colspan="5" class="px-3 pb-3 text-muted small">
+                    <i class="fas fa-sticky-note me-1"></i><span class="truncate" title="<?php echo htmlspecialchars($p['notes']); ?>"><?php echo nl2br(htmlspecialchars($p['notes'])); ?></span>
+                  </td>
+                </tr>
+                <?php endif; ?>
+                <?php endforeach; ?>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <?php require_once __DIR__ . '/../templates/footer.php';
+
+// Auto-print when requested
+if (isset($_GET['print']) && $_GET['print'] === '1') {
+    echo '<script>document.addEventListener("DOMContentLoaded",function(){ setTimeout(function(){ window.print(); }, 150); });</script>';
+}
+
+// Lightweight print styles to hide navigation and buttons
+echo '<style>@media print { nav.navbar, .sidebar, .btn, .input-group, .d-flex.gap-2, .card-header .btn { display:none !important; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .container-fluid { padding: 0 !important; } .card { box-shadow: none !important; } .card-header { border-bottom: 1px solid #ddd; } .table th, .table td { border-color: #bbb !important; } }</style>';

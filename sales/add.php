@@ -196,12 +196,13 @@ $db->close();
                                         <th class="text-end">Qty</th>
                                         <th class="text-end">Price</th>
                                         <th class="text-end">Total</th>
+                                        <th class="text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cartItems"></tbody>
                                 <tfoot class="table-light">
                                     <tr>
-                                        <th colspan="3" class="text-end">
+                                        <th colspan="4" class="text-end">
                                             Total <span class="badge bg-secondary ms-2" id="cartItemQty">0</span>
                                         </th>
                                         <th class="text-end" id="cartTotal">₱0.00</th>
@@ -384,6 +385,12 @@ function saveCart(cart) {
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
 }
 
+function removeFromCart(id) {
+    const cart = loadCart().filter(i => i.id !== id);
+    saveCart(cart);
+    renderCart();
+}
+
 function addToCart(item) {
     const cart = loadCart();
     const existing = cart.find(i => i.id === item.id);
@@ -436,6 +443,11 @@ function renderCart() {
                 <td class="text-end">${item.quantity}</td>
                 <td class="text-end">₱${item.price.toFixed(2)}</td>
                 <td class="text-end">₱${lineTotal.toFixed(2)}</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-from-cart" data-id="${item.id}" data-bs-toggle="tooltip" title="Remove">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
             </tr>
         `;
     });
@@ -619,6 +631,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // Remove single item from cart (event delegation)
+    const cartTbody = document.getElementById('cartItems');
+    if (cartTbody) {
+        cartTbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-from-cart');
+            if (!btn) return;
+            const id = parseInt(btn.dataset.id, 10);
+            removeFromCart(id);
+        });
+    }
 
     // Global helper to select payment method card
     window.selectPaymentMethod = function(id, el) {
