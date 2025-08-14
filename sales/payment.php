@@ -55,10 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $applied = min($amountTendered, $remaining);
             $change = max(0.0, $amountTendered - $remaining);
 
-            // Insert payment record
-            $stmtPay = $db->prepare('INSERT INTO payment_records (sales_debt_id, payment_date, payment_method_id, amount, amount_tendered, total_due, change_amount, received_by_user_id, notes, created_at) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, NOW())');
+            // Insert payment record (store both sales_transaction_id and sales_debt_id per schema)
+            $stmtPay = $db->prepare('INSERT INTO payment_records (sales_transaction_id, sales_debt_id, payment_date, payment_method_id, amount, amount_tendered, total_due, change_amount, received_by_user_id, notes, created_at) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, NOW())');
             if (!$stmtPay) throw new Exception('Failed to prepare payment record insert.');
-            $stmtPay->bind_param('iiddddis', $debt['id'], $paymentMethodId, $applied, $amountTendered, $remaining, $change, $userId, $notes);
+            $stmtPay->bind_param('iiiddddis', $saleId, $debt['id'], $paymentMethodId, $applied, $amountTendered, $remaining, $change, $userId, $notes);
             if (!$stmtPay->execute()) throw new Exception('Failed to insert payment record.');
             $stmtPay->close();
 

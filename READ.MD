@@ -179,7 +179,8 @@ require_once __DIR__ . '/../templates/header.php';
 <?php 
 // Include footer
 require_once __DIR__ . '/../templates/footer.php'; 
-?> -->
+?>
+ -->
 DASHBOARD
 Inventory 
  <!-- - Products -->

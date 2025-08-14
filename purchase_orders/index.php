@@ -162,12 +162,12 @@ $conn->close();
                         </thead>
                         <tbody>
                             <?php foreach ($purchases as $index => $purchase): 
+                                $status_value = strtolower(trim($purchase['status'] ?? ''));
+                                // Only two statuses are used: pending and completed. Default to pending styling.
                                 $status_class = [
                                     'pending' => 'warning',
-                                    'approved' => 'info',
                                     'completed' => 'success',
-                                    'cancelled' => 'danger'
-                                ][$purchase['status'] ?? ''] ?? 'secondary';
+                                ][$status_value] ?? 'warning';
                             ?>
                                 <tr class="border-top" data-aos="fade-up" data-aos-delay="<?php echo ($index % 10) * 50; ?>">
                                     <td class="text-center text-muted"><?php echo $index + 1; ?></td>
@@ -208,14 +208,12 @@ $conn->close();
                                         <?php
                                         $status_icon = [
                                             'pending' => 'clock',
-                                            'approved' => 'check-circle',
-                                            'completed' => 'check-double',
-                                            'cancelled' => 'times-circle'
-                                        ][$purchase['status']] ?? 'question-circle';
+                                            'completed' => 'check-double'
+                                        ][$status_value] ?? 'clock';
                                         ?>
                                         <span class="badge bg-<?php echo $status_class; ?> bg-opacity-10 text-<?php echo $status_class; ?> border border-<?php echo $status_class; ?> border-opacity-25 px-3 py-1">
                                             <i class="fas fa-<?php echo $status_icon; ?> me-1"></i>
-                                            <?php echo ucfirst($purchase['status']); ?>
+                                            <?php echo ucfirst($status_value ?: 'pending'); ?>
                                         </span>
                                     </td>
                                     <td class="text-end pe-3">

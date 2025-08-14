@@ -103,6 +103,7 @@ $rowNumber = 1;
                                 <th class="text-uppercase text-muted small fw-bold">Contact Person</th>
                                 <th class="text-uppercase text-muted small fw-bold">Phone</th>
                                 <th class="text-uppercase text-muted small fw-bold">Email</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end">Purchase Orders</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end">Total Purchases</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
                             </tr>
@@ -132,7 +133,13 @@ $rowNumber = 1;
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end fw-medium">
-                                    ₱0.00
+                                    <?php echo isset($supplier['total_purchase_orders']) ? (int)$supplier['total_purchase_orders'] : 0; ?>
+                                </td>
+                                <td class="text-end fw-medium">
+                                    <?php 
+                                        $total = isset($supplier['total_purchases']) ? (float)$supplier['total_purchases'] : 0;
+                                        echo '₱' . number_format($total, 2);
+                                    ?>
                                 </td>
                                 <td class="text-end pe-3">
                                     <div class="d-flex gap-1 justify-content-end">

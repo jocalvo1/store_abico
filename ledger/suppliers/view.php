@@ -281,15 +281,16 @@ require_once __DIR__ . '/../../templates/header.php';
                                         <td class="text-end">₱<?php echo number_format($po['total_amount'], 2); ?></td>
                                         <td>
                                             <?php
+                                            // Normalize status to match global mapping (pending/completed)
+                                            $rawStatus = isset($po['status']) ? strtolower(trim($po['status'])) : '';
+                                            $normalizedStatus = in_array($rawStatus, ['pending','completed'], true) ? $rawStatus : 'pending';
                                             $statusClass = [
-                                                'draft' => 'bg-secondary',
-                                                'ordered' => 'bg-primary',
-                                                'received' => 'bg-success',
-                                                'cancelled' => 'bg-danger'
-                                            ][$po['status']] ?? 'bg-secondary';
+                                                'pending' => 'bg-warning',
+                                                'completed' => 'bg-success'
+                                            ][$normalizedStatus];
                                             ?>
                                             <span class="badge <?php echo $statusClass; ?>">
-                                                <?php echo ucfirst(htmlspecialchars($po['status'])); ?>
+                                                <?php echo ucfirst(htmlspecialchars($normalizedStatus)); ?>
                                             </span>
                                         </td>
                                         <td title="<?php echo htmlspecialchars($po['items']); ?>">

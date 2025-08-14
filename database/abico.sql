@@ -68,7 +68,7 @@ CREATE TABLE `deliveries` (
   `delivery_date` date NOT NULL,
   `status` enum('pending','delivered','cancelled') DEFAULT 'pending',
   `delivered_by` varchar(255) DEFAULT NULL,
-  `received_by_user_id` int(11) DEFAULT NULL,
+  `received_by` varchar(255) DEFAULT NULL,
   `cancel_reason` text DEFAULT NULL,
   `confirm_notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -341,8 +341,7 @@ ALTER TABLE `customers`
 --
 ALTER TABLE `deliveries`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `purchase_order_id` (`purchase_order_id`),
-  ADD KEY `received_by_user_id` (`received_by_user_id`);
+  ADD KEY `purchase_order_id` (`purchase_order_id`);
 
 --
 -- Indexes for table `delivery_items`

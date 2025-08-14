@@ -19,7 +19,11 @@ class SupplierController {
 
     // Get all suppliers
     public function getAll() {
-        $query = 'SELECT * FROM ' . $this->table . ' ORDER BY name ASC';
+        $query = 'SELECT s.*, COALESCE(SUM(po.total_amount), 0) AS total_purchases, COUNT(po.id) AS total_purchase_orders
+                  FROM ' . $this->table . ' s
+                  LEFT JOIN purchase_orders po ON po.supplier_id = s.id
+                  GROUP BY s.id
+                  ORDER BY s.name ASC';
         $result = $this->conn->query($query);
         
         if ($result === false) {
@@ -147,12 +151,15 @@ class SupplierController {
 
     // Search suppliers
     public function search($searchTerm) {
-        $query = 'SELECT * FROM ' . $this->table . ' 
-                 WHERE name LIKE ? 
-                 OR contact_person LIKE ? 
-                 OR email LIKE ? 
-                 OR contact_number LIKE ?
-                 ORDER BY name ASC';
+        $query = 'SELECT s.*, COALESCE(SUM(po.total_amount), 0) AS total_purchases, COUNT(po.id) AS total_purchase_orders
+                 FROM ' . $this->table . ' s
+                 LEFT JOIN purchase_orders po ON po.supplier_id = s.id
+                 WHERE s.name LIKE ? 
+                 OR s.contact_person LIKE ? 
+                 OR s.email LIKE ? 
+                 OR s.contact_number LIKE ?
+                 GROUP BY s.id
+                 ORDER BY s.name ASC';
         
         $stmt = $this->conn->prepare($query);
         if ($stmt === false) {

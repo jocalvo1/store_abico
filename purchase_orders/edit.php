@@ -79,6 +79,12 @@ if ($item_result) {
     $all_items = $item_result->fetch_all(MYSQLI_ASSOC);
 }
 
+// Build a quick lookup map for item names
+$item_name_map = [];
+foreach ($all_items as $it) {
+    $item_name_map[(int)$it['id']] = $it['name'];
+}
+
 $errors = [];
 
 // Handle form submission
@@ -126,6 +132,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($purchase_items)) {
         $errors[] = "Please add at least one item to the purchase order.";
+    }
+    
+    // Prevent duplicate items in the same purchase order
+    if (empty($errors)) {
+        $seen = [];
+        foreach ($purchase_items as $pi) {
+            $iid = (int)$pi['item_id'];
+            if (isset($seen[$iid])) {
+                $name = isset($item_name_map[$iid]) ? $item_name_map[$iid] : ('Item #' . $iid);
+                $errors[] = "Duplicate item selected: " . htmlspecialchars($name);
+                break;
+            }
+            $seen[$iid] = true;
+        }
     }
     
     // If no errors, save to database
@@ -450,6 +470,26 @@ require_once __DIR__ . '/../templates/header.php';
                 const itemRowTemplate = document.getElementById('itemRowTemplate');
                 const grandTotalInput = document.getElementById('grandTotal');
                 
+                function getSelectedItemIds() {
+                    const ids = [];
+                    document.querySelectorAll('.item-row .item-select').forEach(sel => {
+                        if (sel.value) ids.push(sel.value);
+                    });
+                    return ids;
+                }
+                
+                function updateSelectOptions() {
+                    const selected = getSelectedItemIds();
+                    document.querySelectorAll('.item-row .item-select').forEach(sel => {
+                        const current = sel.value;
+                        Array.from(sel.options).forEach(opt => {
+                            if (!opt.value) return; // skip placeholder
+                            // disable if selected elsewhere, but keep enabled for the row that currently uses it
+                            opt.disabled = selected.includes(opt.value) && opt.value !== current;
+                        });
+                    });
+                }
+                
                 // Add new item row
                 addItemBtn.addEventListener('click', function() {
                     const newRow = itemRowTemplate.content.cloneNode(true);
@@ -461,12 +501,14 @@ require_once __DIR__ . '/../templates/header.php';
                     
                     // Focus on the item select
                     newRowElement.querySelector('.item-select').focus();
+                    updateSelectOptions();
                 });
                 
                 // Initialize existing rows
                 document.querySelectorAll('.item-row').forEach(row => {
                     initializeRow(row);
                 });
+                updateSelectOptions();
                 
                 // Initialize a row with event listeners
                 function initializeRow(row) {
@@ -484,6 +526,22 @@ require_once __DIR__ . '/../templates/header.php';
                         unitSpan.textContent = unit;
                         calculateRowTotal(row);
                         calculateGrandTotal();
+                        updateSelectOptions();
+                        // Simple duplicate warning
+                        const currentVal = this.value;
+                        if (currentVal) {
+                            let count = 0;
+                            document.querySelectorAll('.item-row .item-select').forEach(s => {
+                                if (s.value === currentVal) count++;
+                            });
+                            if (count > 1) {
+                                this.classList.add('is-invalid');
+                            } else {
+                                this.classList.remove('is-invalid');
+                            }
+                        } else {
+                            this.classList.remove('is-invalid');
+                        }
                     });
                     
                     // Calculate total when quantity or price changes
@@ -494,6 +552,7 @@ require_once __DIR__ . '/../templates/header.php';
                     removeBtn.addEventListener('click', function() {
                         row.remove();
                         calculateGrandTotal();
+                        updateSelectOptions();
                     });
                 }
                 
@@ -536,6 +595,27 @@ require_once __DIR__ . '/../templates/header.php';
                             select.classList.remove('is-invalid');
                         }
                     });
+                    
+                    // Prevent duplicate items
+                    if (isValid) {
+                        const seen = new Set();
+                        let duplicateFound = false;
+                        document.querySelectorAll('.item-select').forEach(select => {
+                            const v = select.value;
+                            if (!v) return;
+                            if (seen.has(v)) {
+                                duplicateFound = true;
+                                select.classList.add('is-invalid');
+                            } else {
+                                seen.add(v);
+                            }
+                        });
+                        if (duplicateFound) {
+                            e.preventDefault();
+                            alert('Each item can only be added once. Please remove duplicates.');
+                            return false;
+                        }
+                    }
                     
                     if (!isValid) {
                         e.preventDefault();

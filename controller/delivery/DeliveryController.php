@@ -18,7 +18,7 @@ class DeliveryController {
                         CONCAT(
                             i.name, 
                             ' (', 
-                            di.quantity, 
+                            COALESCE(di.received_quantity, 0), 
                             ')'
                         ) 
                         SEPARATOR ', ' 
@@ -27,7 +27,7 @@ class DeliveryController {
                     JOIN purchase_order_items poi ON di.purchase_order_item_id = poi.id
                     JOIN items i ON poi.item_id = i.id
                     WHERE di.delivery_id = d.id) as items_list,
-                    (SELECT SUM(di.quantity * poi.unit_price) 
+                    (SELECT SUM(COALESCE(di.received_quantity, 0) * poi.unit_price) 
                      FROM delivery_items di
                      JOIN purchase_order_items poi ON di.purchase_order_item_id = poi.id
                      WHERE di.delivery_id = d.id) as total_value
@@ -50,11 +50,17 @@ class DeliveryController {
                 i.unit,
                 poi.quantity as ordered_quantity,
                 poi.unit_price,
-                COALESCE(SUM(di.quantity), 0) as delivered_quantity,
-                (poi.quantity - COALESCE(SUM(di.quantity), 0)) as remaining_quantity
+                -- Confirmed received quantities
+                COALESCE(SUM(di.received_quantity), 0) 
+                  + COALESCE(SUM(CASE WHEN d.status = 'pending' THEN di.quantity ELSE 0 END), 0) as delivered_quantity,
+                (poi.quantity - (
+                    COALESCE(SUM(di.received_quantity), 0) 
+                    + COALESCE(SUM(CASE WHEN d.status = 'pending' THEN di.quantity ELSE 0 END), 0)
+                )) as remaining_quantity
             FROM purchase_order_items poi
             JOIN items i ON poi.item_id = i.id
             LEFT JOIN delivery_items di ON poi.id = di.purchase_order_item_id
+            LEFT JOIN deliveries d ON di.delivery_id = d.id
             WHERE poi.purchase_order_id = ?
             GROUP BY poi.id
             HAVING remaining_quantity > 0
@@ -78,11 +84,16 @@ class DeliveryController {
                 i.unit,
                 poi.quantity as ordered_quantity,
                 poi.unit_price,
-                COALESCE(SUM(di.quantity), 0) as delivered_quantity,
-                (poi.quantity - COALESCE(SUM(di.quantity), 0)) as remaining_quantity
+                COALESCE(SUM(di.received_quantity), 0)
+                  + COALESCE(SUM(CASE WHEN d.status = 'pending' THEN di.quantity ELSE 0 END), 0) as delivered_quantity,
+                (poi.quantity - (
+                    COALESCE(SUM(di.received_quantity), 0)
+                    + COALESCE(SUM(CASE WHEN d.status = 'pending' THEN di.quantity ELSE 0 END), 0)
+                )) as remaining_quantity
             FROM purchase_order_items poi
             JOIN items i ON poi.item_id = i.id
             LEFT JOIN delivery_items di ON poi.id = di.purchase_order_item_id
+            LEFT JOIN deliveries d ON di.delivery_id = d.id
             WHERE poi.purchase_order_id = ?
             GROUP BY poi.id
         ";
@@ -120,7 +131,7 @@ class DeliveryController {
                  JOIN suppliers s ON po.supplier_id = s.id
                  JOIN purchase_order_items poi ON po.id = poi.purchase_order_id
                  LEFT JOIN (
-                     SELECT di.purchase_order_item_id, SUM(di.quantity) as delivered_quantity
+                     SELECT di.purchase_order_item_id, SUM(COALESCE(di.received_quantity,0)) as delivered_quantity
                      FROM delivery_items di
                      GROUP BY di.purchase_order_item_id
                  ) di ON poi.id = di.purchase_order_item_id
@@ -153,6 +164,73 @@ class DeliveryController {
         
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param('sss', $searchTerm, $searchTerm, $searchTerm);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
+
+    // Filter deliveries by optional search and date range (delivery_date)
+    public function filterDeliveries($searchTerm, $status, $dateFrom, $dateTo) {
+        $clauses = [];
+        $params = [];
+        $types = '';
+
+        if ($searchTerm !== '') {
+            $like = "%{$searchTerm}%";
+            $clauses[] = '(po.po_number LIKE ? OR s.name LIKE ? OR COALESCE(d.delivered_by, "") LIKE ?)';
+            $params[] = $like; $params[] = $like; $params[] = $like; $types .= 'sss';
+        }
+        if ($status !== '') {
+            $clauses[] = 'd.status = ?';
+            $params[] = $status; $types .= 's';
+        }
+        if ($dateFrom !== '') {
+            $clauses[] = 'd.delivery_date >= ?';
+            $params[] = $dateFrom; $types .= 's';
+        }
+        if ($dateTo !== '') {
+            $clauses[] = 'd.delivery_date <= ?';
+            $params[] = $dateTo; $types .= 's';
+        }
+
+        $where = '';
+        if (!empty($clauses)) {
+            $where = 'WHERE ' . implode(' AND ', $clauses);
+        }
+
+        // Match columns of getAll(): items_list and total_value based on delivery_items received quantities
+        $query = "SELECT 
+                    d.*, 
+                    po.id as po_id,
+                    po.po_number,
+                    po.supplier_id,
+                    s.name as supplier_name,
+                    (SELECT GROUP_CONCAT(
+                        CONCAT(
+                            i.name,
+                            ' (',
+                            COALESCE(di.received_quantity, 0),
+                            ')'
+                        )
+                        SEPARATOR ', '
+                    )
+                    FROM delivery_items di
+                    JOIN purchase_order_items poi ON di.purchase_order_item_id = poi.id
+                    JOIN items i ON poi.item_id = i.id
+                    WHERE di.delivery_id = d.id) as items_list,
+                    (SELECT SUM(COALESCE(di.received_quantity, 0) * poi.unit_price)
+                     FROM delivery_items di
+                     JOIN purchase_order_items poi ON di.purchase_order_item_id = poi.id
+                     WHERE di.delivery_id = d.id) as total_value
+                  FROM deliveries d
+                  JOIN purchase_orders po ON d.purchase_order_id = po.id
+                  JOIN suppliers s ON po.supplier_id = s.id
+                  $where
+                  ORDER BY d.delivery_date DESC, d.id DESC";
+
+        $stmt = $this->conn->prepare($query);
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
         $stmt->execute();
         return $stmt->get_result();
     }
@@ -236,11 +314,16 @@ class DeliveryController {
                 }
             }
             
-            // Check if all items are delivered
-            $checkQuery = "SELECT COUNT(*) as undelivered 
-                          FROM purchase_order_items 
-                          WHERE purchase_order_id = ? 
-                          AND (delivered_quantity IS NULL OR quantity > delivered_quantity)";
+            // Check if all items are delivered (based on confirmed received quantities)
+            $checkQuery = "SELECT COUNT(*) as undelivered
+                           FROM purchase_order_items poi
+                           LEFT JOIN (
+                               SELECT purchase_order_item_id, SUM(COALESCE(received_quantity,0)) AS received_sum
+                               FROM delivery_items
+                               GROUP BY purchase_order_item_id
+                           ) di ON poi.id = di.purchase_order_item_id
+                           WHERE poi.purchase_order_id = ?
+                           AND (di.received_sum IS NULL OR poi.quantity > di.received_sum)";
             $checkStmt = $this->conn->prepare($checkQuery);
             $checkStmt->bind_param('i', $data['po_id']);
             $checkStmt->execute();
@@ -384,3 +467,95 @@ class DeliveryController {
     }
 }
 ?>
+<?php
+// Procedural POST handler for confirm delivery from modal
+// Expects: id (delivery_id), status='delivered', delivered_by, received_by, notes, received_quantities[delivery_item_id]
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status']) && $_POST['status'] === 'delivered' && isset($_POST['id'])) {
+    require_once dirname(__DIR__, 2) . '/includes/database.php';
+    $conn = getDBConnection();
+
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    $deliveryId = (int)($_POST['id'] ?? 0);
+    $deliveredBy = trim($_POST['delivered_by'] ?? '');
+    $receivedBy = trim($_POST['received_by'] ?? '');
+    $notes = trim($_POST['notes'] ?? '');
+    $receivedQuantities = isset($_POST['received_quantities']) && is_array($_POST['received_quantities']) ? $_POST['received_quantities'] : [];
+
+    if ($deliveryId <= 0 || $deliveredBy === '' || $receivedBy === '') {
+        $msg = 'Invalid input.';
+        if ($isAjax) { http_response_code(400); header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => $msg]); exit; }
+        header('Location: ../../deliveries/view.php?id=' . $deliveryId . '&error=' . urlencode($msg)); exit;
+    }
+
+    $conn->begin_transaction();
+    try {
+        // Update delivery header
+        $stmt = $conn->prepare("UPDATE deliveries SET status='delivered', delivered_by=?, received_by=?, confirm_notes=?, updated_at=NOW() WHERE id=?");
+        $stmt->bind_param('sssi', $deliveredBy, $receivedBy, $notes, $deliveryId);
+        if (!$stmt->execute()) throw new Exception('Failed to update delivery: ' . $stmt->error);
+        $stmt->close();
+
+        if (!empty($receivedQuantities)) {
+            // Fetch current received and item mapping for provided delivery_item ids
+            $ids = array_map('intval', array_keys($receivedQuantities));
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $types = str_repeat('i', count($ids));
+            $sql = "SELECT di.id, di.item_id, di.quantity AS planned_quantity, COALESCE(di.received_quantity,0) AS prev_received FROM delivery_items di WHERE di.delivery_id = ? AND di.id IN ($placeholders) FOR UPDATE";
+            $stmt = $conn->prepare($sql);
+            // build params
+            $params = array_merge([$deliveryId], $ids);
+            // bind dynamically
+            $bindTypes = 'i' . $types;
+            $bindValues = [];
+            foreach ($params as $p) { $bindValues[] = $p; }
+            $stmt->bind_param($bindTypes, ...$bindValues);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $rows = [];
+            while ($r = $res->fetch_assoc()) { $rows[$r['id']] = $r; }
+            $stmt->close();
+
+            // Prepare statements for updating delivery_items, items, and inserting stock_movements
+            $updDI = $conn->prepare("UPDATE delivery_items SET received_quantity=? WHERE id=?");
+            $updItem = $conn->prepare("UPDATE items SET current_stock = current_stock + ? WHERE id=?");
+            $insSM = $conn->prepare("INSERT INTO stock_movements(item_id, movement_type, quantity, reference_type, reference_id, notes, created_at) VALUES(?, 'in', ?, 'delivery', ?, ?, NOW())");
+
+            foreach ($receivedQuantities as $diId => $val) {
+                $diId = (int)$diId;
+                if (!isset($rows[$diId])) continue; // ignore unknown ids
+                $target = (int)$val;
+                $planned = (int)$rows[$diId]['planned_quantity'];
+                if ($target < 0) $target = 0;
+                if ($target > $planned) $target = $planned; // enforce max server-side
+                $prev = (int)$rows[$diId]['prev_received'];
+                if ($target === $prev) continue; // nothing to change
+
+                // Update delivery_items.received_quantity
+                $updDI->bind_param('ii', $target, $diId);
+                if (!$updDI->execute()) throw new Exception('Failed to update received qty: ' . $updDI->error);
+
+                // Stock increment by the delta
+                $delta = $target - $prev;
+                if ($delta > 0) {
+                    $itemId = (int)$rows[$diId]['item_id'];
+                    $updItem->bind_param('ii', $delta, $itemId);
+                    if (!$updItem->execute()) throw new Exception('Failed to update stock: ' . $updItem->error);
+                    $note = 'Delivery #' . $deliveryId . ' confirmation';
+                    $insSM->bind_param('iiis', $itemId, $delta, $deliveryId, $note);
+                    if (!$insSM->execute()) throw new Exception('Failed to log stock movement: ' . $insSM->error);
+                }
+            }
+            $updDI->close();
+            $updItem->close();
+            $insSM->close();
+        }
+
+        $conn->commit();
+        if ($isAjax) { header('Content-Type: application/json'); echo json_encode(['success' => true, 'message' => 'Delivery confirmed successfully']); exit; }
+        header('Location: ../../deliveries/view.php?id=' . $deliveryId . '&success=1'); exit;
+    } catch (Exception $ex) {
+        $conn->rollback();
+        if ($isAjax) { http_response_code(500); header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => $ex->getMessage()]); exit; }
+        header('Location: ../../deliveries/view.php?id=' . $deliveryId . '&error=' . urlencode($ex->getMessage())); exit;
+    }
+}

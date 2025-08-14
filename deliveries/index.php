@@ -27,12 +27,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_delivery_items') {
     exit();
 }
 
-// Handle search
+// Handle search, status and date filters (same format as stock_movements)
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status = isset($_GET['status']) ? trim($_GET['status']) : '';
+$dateFrom = isset($_GET['from']) ? trim($_GET['from']) : '';
+$dateTo = isset($_GET['to']) ? trim($_GET['to']) : '';
 
-// Get deliveries based on search
-if (!empty($search)) {
-    $result = $deliveryController->search($search);
+// Normalize dates (YYYY-MM-DD)
+if ($dateFrom !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) { $dateFrom = ''; }
+if ($dateTo !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) { $dateTo = ''; }
+
+// Get deliveries based on filters
+if (!empty($search) || !empty($status) || !empty($dateFrom) || !empty($dateTo)) {
+    if (method_exists($deliveryController, 'filterDeliveries')) {
+        $result = $deliveryController->filterDeliveries($search, $status, $dateFrom, $dateTo);
+    } else {
+        // Fallback to text search if controller isn't updated
+        $result = $deliveryController->search($search);
+    }
 } else {
     $result = $deliveryController->getAll();
 }
@@ -49,31 +61,41 @@ $conn->close();
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
-        <div class="row">
-            <h1 class="h3 mb-0 mt-2">Deliveries</h1>
-        </div>
-        <div class="d-flex align-items-center">
-            <form action="" method="get" class="me-3 min-width-300px">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="fas fa-search text-muted"></i>
-                    </span>
-                    <input type="text" 
-                           class="form-control form-control-sm border-start-0 ps-0" 
-                           name="search" 
-                           placeholder="Search deliveries..." 
-                           value="<?php echo htmlspecialchars($search); ?>"
-                           aria-label="Search deliveries">
-                    <?php if (!empty($search)): ?>
-                        <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn btn-sm btn-outline-danger border-start-0" title="Clear search">
-                            <i class="fas fa-times"></i>
-                        </a>
-                    <?php endif; ?>
+        <h1 class="h3 mb-0 mt-2">Deliveries</h1>
+        <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
+            <i class="fas fa-plus me-1"></i> Add New
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4" data-aos="fade-up" data-aos-delay="50">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="PO #, supplier, delivered by">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All</option>
+                        <option value="pending" <?php echo $status==='pending'?'selected':''; ?>>Pending</option>
+                        <option value="delivered" <?php echo $status==='delivered'?'selected':''; ?>>Delivered</option>
+                        <option value="cancelled" <?php echo $status==='cancelled'?'selected':''; ?>>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">From</label>
+                    <input type="date" class="form-control" name="from" value="<?php echo htmlspecialchars($dateFrom); ?>">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To</label>
+                    <input type="date" class="form-control" name="to" value="<?php echo htmlspecialchars($dateTo); ?>">
+                </div>
+                <div class="col-12 mt-2">
+                    <button class="btn btn-primary">Filter</button>
+                    <a class="btn btn-outline-secondary" href="index.php">Reset</a>
                 </div>
             </form>
-            <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
-                <i class="fas fa-plus me-1"></i> Add New
-            </a>
         </div>
     </div>
     <?php if (isset($_SESSION['success'])): ?>
@@ -218,30 +240,6 @@ require_once __DIR__ . '/../templates/footer.php';
 ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Search functionality
-    const searchForm = document.createElement('form');
-    searchForm.method = 'get';
-    searchForm.style.display = 'none';
-    searchForm.innerHTML = '<input type="hidden" name="search" id="searchValue">';
-    document.body.appendChild(searchForm);
-
-    const searchInput = document.querySelector('input[name="search"]');
-    if (searchInput) {
-        searchInput.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                performSearch();
-            }
-        });
-    }
-    
-    function performSearch() {
-        if (searchInput) {
-            document.getElementById('searchValue').value = searchInput.value.trim();
-            searchForm.submit();
-        }
-    }
-
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

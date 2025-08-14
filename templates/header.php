@@ -133,14 +133,14 @@ function isActive($paths, $class = 'active') {
 
                 <!-- ledger Dropdown -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle <?= isActive(['ledger', 'customers', 'suppliers', 'payments']) ?>" href="#" id="ledgerDropdown" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle <?= isActive(['ledger', 'customers', 'suppliers', 'payments', 'checks']) ?>" href="#" id="ledgerDropdown" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-book me-1"></i> LEDGER
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="<?= url('ledger/customers'); ?>"><i class="fas fa-users me-2"></i>CUSTOMERS</a></li>
                         <li><a class="dropdown-item" href="<?= url('ledger/suppliers/index.php'); ?>"><i class="fas fa-truck-loading me-2"></i>SUPPLIERS</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="<?= url('ledger/check-exchanges'); ?>"><i class="fas fa-exchange-alt me-2"></i>CHECK EXCHANGES</a></li>
+                        <li><a class="dropdown-item" href="<?= url('ledger/checks'); ?>"><i class="fas fa-exchange-alt me-2"></i>CHECK EXCHANGES</a></li>
                         <li><a class="dropdown-item" href="<?= url('ledger/payments'); ?>"><i class="fas fa-money-bill-wave me-2"></i>PAYMENTS</a></li>
                     </ul>
                 </li>

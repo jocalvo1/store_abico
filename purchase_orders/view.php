@@ -57,7 +57,8 @@ $stmt = $conn->prepare("
         pi.*, 
         i.name as item_name, 
         i.unit,
-        COALESCE(SUM(di.received_quantity), 0) as total_received
+        COALESCE(SUM(di.received_quantity), 0) as total_received,
+        COALESCE(SUM(di.quantity), 0) as total_allocated
     FROM purchase_order_items pi
     JOIN items i ON pi.item_id = i.id
     LEFT JOIN delivery_items di ON pi.id = di.purchase_order_item_id
@@ -121,13 +122,13 @@ $stmt->close();
 $deliveries = [];
 $stmt = $conn->prepare("
     SELECT d.*, 
-           u.name as received_by_name,
+           d.received_by as received_by_name,
            (SELECT GROUP_CONCAT(
                 CONCAT(
                     '<div class=\'d-flex justify-content-between\'>',
                     '<span class=\'text-nowrap\'>', i.name, '</span>',
                     '<span class=\'ms-2 text-muted\'>', 
-                        CAST(di.received_quantity AS UNSIGNED), ' <small>', i.unit, '</small>',
+                        CAST(COALESCE(CASE WHEN d2.status = 'completed' THEN di.received_quantity ELSE di.quantity END, 0) AS UNSIGNED), ' <small>', REPLACE(i.unit, ' ', ''), '</small>',
                     '</span>',
                     '</div>'
                 )
@@ -135,10 +136,10 @@ $stmt = $conn->prepare("
             )
             FROM delivery_items di
             JOIN items i ON di.item_id = i.id
+            JOIN deliveries d2 ON di.delivery_id = d2.id
             WHERE di.delivery_id = d.id) as items_list,
            (SELECT COUNT(*) FROM delivery_items WHERE delivery_id = d.id) as item_count
     FROM deliveries d
-    LEFT JOIN users u ON d.received_by_user_id = u.id
     WHERE d.purchase_order_id = ?
     ORDER BY d.delivery_date DESC, d.created_at DESC
 ");
@@ -325,13 +326,13 @@ require_once __DIR__ . '/../templates/header.php';
                                                         </div>
                                                     </div>
                                                     <small class="text-muted">
-                                                        <?php echo $received; ?> of <?php echo $item['quantity']; ?> <?php echo $item['unit']; ?> received
+                                                        <?php echo $received; ?> of <?php echo $item['quantity']; ?> <?php echo preg_replace('/\s+/', '', $item['unit']); ?> received
                                                     </small>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-end">
                                                 <?php echo number_format($item['quantity'], 0); ?>
-                                                <span class="text-muted"><?php echo $item['unit']; ?></span>
+                                                <span class="text-muted"><?php echo preg_replace('/\s+/', '', $item['unit']); ?></span>
                                             </td>
                                             <td class="text-end">
                                                 <?php 
@@ -402,7 +403,7 @@ require_once __DIR__ . '/../templates/header.php';
                         <thead class="table-light">
                             <tr>
                                 <th>Delivery #</th>
-                                <th>Date</th>
+                                <th>Delivery Date</th>
                                 <th>Status</th>
                                 <th>Delivered By</th>
                                 <th>Received By</th>
@@ -439,20 +440,15 @@ require_once __DIR__ . '/../templates/header.php';
                                             <span class="text-muted fst-italic">No items</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <?php if (!empty($delivery['confirm_notes'])): ?>
-                                            <span class="d-inline-block text-truncate" style="max-width: 200px;" 
-                                                  title="<?php echo htmlspecialchars($delivery['confirm_notes']); ?>">
-                                                <?php echo htmlspecialchars($delivery['confirm_notes']); ?>
-                                            </span>
-                                        <?php elseif (!empty($delivery['cancel_reason'])): ?>
-                                            <span class="d-inline-block text-truncate text-danger" style="max-width: 200px;" 
-                                                  title="Cancellation: <?php echo htmlspecialchars($delivery['cancel_reason']); ?>">
-                                                <i class="fas fa-times-circle me-1"></i>
-                                                <?php echo htmlspecialchars($delivery['cancel_reason']); ?>
-                                            </span>
+                                    <td class="align-middle small" style="white-space: normal; word-break: break-word;">
+                                        <?php if (!empty($delivery['cancel_reason'])): ?>
+                                            <?php $cr = trim(preg_replace('/\s+/', ' ', $delivery['cancel_reason'])); ?>
+                                            <span class="text-danger"><?php echo htmlspecialchars($cr); ?></span>
+                                        <?php elseif (!empty($delivery['confirm_notes'])): ?>
+                                            <?php $cn = trim(preg_replace('/\s+/', ' ', $delivery['confirm_notes'])); ?>
+                                            <?php echo htmlspecialchars($cn); ?>
                                         <?php else: ?>
-                                            —
+                                            <span class="text-muted">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end">
@@ -471,6 +467,21 @@ require_once __DIR__ . '/../templates/header.php';
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.js-view-note').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const title = btn.getAttribute('data-title') || 'Notes';
+      const content = btn.getAttribute('data-content') || '';
+      const titleEl = document.getElementById('noteModalLabel');
+      const contentEl = document.getElementById('noteModalContent');
+      if (titleEl) titleEl.textContent = title;
+      if (contentEl) contentEl.textContent = content;
+    });
+  });
+});
+</script>
 
 <?php 
 // Include footer

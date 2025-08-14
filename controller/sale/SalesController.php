@@ -245,6 +245,7 @@ class SalesController {
                 FROM sales_transactions st
                 LEFT JOIN customers c ON c.id = st.customer_id
                 LEFT JOIN payment_methods pm ON pm.id = st.payment_method_id
+                WHERE EXISTS (SELECT 1 FROM sales_transaction_items sti WHERE sti.sales_transaction_id = st.id)
                 ORDER BY st.transaction_date DESC
                 LIMIT ?";
         $stmt = $this->db->prepare($sql);
@@ -276,7 +277,8 @@ class SalesController {
                 FROM sales_transactions st
                 LEFT JOIN customers c ON c.id = st.customer_id
                 LEFT JOIN payment_methods pm ON pm.id = st.payment_method_id
-                WHERE c.name LIKE ? OR pm.name LIKE ? OR st.id = ?
+                WHERE (c.name LIKE ? OR pm.name LIKE ? OR st.id = ?)
+                  AND EXISTS (SELECT 1 FROM sales_transaction_items sti WHERE sti.sales_transaction_id = st.id)
                 ORDER BY st.transaction_date DESC
                 LIMIT 200";
         $stmt = $this->db->prepare($sql);

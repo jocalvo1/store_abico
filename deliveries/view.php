@@ -77,12 +77,12 @@ if ($delivery_id <= 0) {
                 <?php endif; ?>
             </div>
         </div>
-        <div>
-            <a href="edit.php?id=<?php echo $delivery_id; ?>" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-edit"></i> Edit
-            </a>
+        <div class="btn-group">
             <a href="index.php" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Deliveries
+            </a>
+            <a href="print.php?id=<?php echo $delivery_id; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-print"></i> Print
             </a>
         </div>
     </div>
@@ -119,6 +119,8 @@ if ($delivery_id <= 0) {
                                 <?php echo ucfirst($delivery['status']); ?>
                             </span>
                         </p>
+                        <p class="mb-1"><strong>Delivered By:</strong> <?php echo htmlspecialchars($delivery['delivered_by'] ?? '—'); ?></p>
+                        <p class="mb-0"><strong>Received By:</strong> <?php echo htmlspecialchars($delivery['received_by'] ?? '—'); ?></p>
                     </div>
                     <div class="col-md-4">
                         <h6>Totals</h6>
@@ -181,6 +183,34 @@ if ($delivery_id <= 0) {
                     </div>
                 </div>
 
+                <div class="card mb-4">
+                    <div class="card-header d-flex align-items-center gap-2">
+                        <h6 class="mb-0">Notes</h6>
+                        <?php if (!empty($delivery['cancel_reason'])): ?>
+                            <span class="badge bg-danger">Cancelled</span>
+                        <?php elseif (!empty($delivery['confirm_notes'])): ?>
+                            <span class="badge bg-success">Confirmed</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($delivery['cancel_reason'])): ?>
+                            <div class="p-3 border rounded">
+                                <div style="white-space: pre-wrap; word-break: break-word;">
+                                    <?php echo nl2br(htmlspecialchars($delivery['cancel_reason'])); ?>
+                                </div>
+                            </div>
+                        <?php elseif (!empty($delivery['confirm_notes'])): ?>
+                            <div class="p-3 bg-light border rounded">
+                                <div style="white-space: pre-wrap; word-break: break-word;">
+                                    <?php echo nl2br(htmlspecialchars($delivery['confirm_notes'])); ?>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <span class="text-muted">No notes provided.</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="text-muted small mb-0">
@@ -199,7 +229,7 @@ if ($delivery_id <= 0) {
                                 <i class="fas fa-times"></i> Cancel
                             </button>
                         <?php endif; ?>
-                        <a href="print.php?id=<?php echo $delivery_id; ?>" target="_blank" class="btn btn-outline-secondary">
+                        <a href="print.php?id=<?php echo $delivery_id; ?>&print=1" target="_blank" class="btn btn-outline-secondary">
                             <i class="fas fa-print"></i> Print
                         </a>
                     </div>
@@ -220,6 +250,15 @@ if ($delivery_id <= 0) {
                         <input type="hidden" name="status" value="delivered">
                         
                         <div class="modal-body">
+                            <div class="alert alert-success d-flex align-items-start py-2">
+                                <i class="fas fa-truck me-2 mt-1"></i>
+                                <div>
+                                    Please confirm received quantities per item. You can quickly mark all items as fully received.
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-success js-receive-all"><i class="fas fa-check-double me-1"></i> Mark all as received</button>
+                            </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-bordered">
                                     <thead class="table-light">
@@ -239,10 +278,14 @@ if ($delivery_id <= 0) {
                                                 <td>
                                                     <input type="number" 
                                                            name="received_quantities[<?php echo $item['id']; ?>]" 
-                                                           class="form-control form-control-sm" 
+                                                           class="form-control form-control-sm js-received" 
                                                            value="<?php echo $item['quantity']; ?>" 
                                                            min="0" 
-                                                           max="<?php echo $item['quantity']; ?>">
+                                                           max="<?php echo $item['quantity']; ?>"
+                                                           step="1" 
+                                                           inputmode="numeric"
+                                                           aria-label="Received quantity for <?php echo htmlspecialchars($item['item_name']); ?>">
+                                                     <div class="form-text small text-muted">Max: <?php echo (int)$item['quantity']; ?></div>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -254,14 +297,17 @@ if ($delivery_id <= 0) {
                                 <div class="col-md-6">
                                     <label for="deliveredBy" class="form-label">Delivered By</label>
                                     <input type="text" class="form-control" id="deliveredBy" name="delivered_by" placeholder="Name of the person who delivered the items" required>
+                                    <div class="invalid-feedback">Please enter who delivered the items.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="receivedBy" class="form-label">Received By</label>
                                     <input type="text" class="form-control" id="receivedBy" name="received_by" placeholder="Name of the person who received the items" required>
+                                    <div class="invalid-feedback">Please enter who received the items.</div>
                                 </div>
                                 <div class="col-12">
                                     <label for="deliveryNotes" class="form-label">Notes (Optional)</label>
                                     <textarea class="form-control" id="deliveryNotes" name="notes" rows="2" placeholder="Any notes or comments about the delivery"></textarea>
+                                    <div class="form-text">You can add remarks about discrepancies if any.</div>
                                 </div>
                             </div>
                         </div>
@@ -270,7 +316,7 @@ if ($delivery_id <= 0) {
                             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                                 <i class="fas fa-times me-1"></i> Close
                             </button>
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success" id="submitConfirmBtn" disabled>
                                 <i class="fas fa-check me-1"></i> Confirm Delivery
                             </button>
                         </div>
@@ -287,17 +333,42 @@ if ($delivery_id <= 0) {
                         <h5 class="modal-title" id="cancelDeliveryModalLabel">Cancel Delivery</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form id="cancelDeliveryForm" action="cancel_delivery.php" method="post" onsubmit="document.getElementById('submitCancelBtn').disabled = true; document.getElementById('submitCancelBtn').innerHTML = '<span class=\'spinner-border spinner-border-sm\' role=\'status\' aria-hidden=\'true\'></span> Processing...';">
+                    <form id="cancelDeliveryForm" action="cancel_delivery.php" method="post" novalidate>
                         <div class="modal-body">
+                            <div class="alert alert-danger d-flex align-items-start py-2">
+                                <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                                <div>
+                                    Cancelling this delivery cannot be undone. Please provide a reason for audit logs.
+                                </div>
+                            </div>
                             <input type="hidden" name="delivery_id" value="<?php echo $delivery_id; ?>">
-                            <div class="mb-3">
+                            <div class="mb-2">
+                                <label class="form-label">Quick reasons</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-reason" data-reason="Supplier delay">Supplier delay</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-reason" data-reason="Incorrect items listed">Incorrect items listed</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-reason" data-reason="Order duplicated">Order duplicated</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-reason" data-reason="Customer request">Customer request</button>
+                                </div>
+                            </div>
+                            <div class="mb-2">
                                 <label for="cancellation_reason" class="form-label">Reason for Cancellation</label>
-                                <textarea class="form-control" id="cancellation_reason" name="cancellation_reason" rows="3" required></textarea>
+                                <textarea class="form-control" id="cancellation_reason" name="cancellation_reason" rows="3" maxlength="250" placeholder="Describe why this delivery is being cancelled..."></textarea>
+                                <div class="d-flex justify-content-between small text-muted mt-1">
+                                    <span>Min 5 characters</span>
+                                    <span><span id="cancelReasonCount">0</span>/250</span>
+                                </div>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" value="1" id="confirmCancelAck">
+                                <label class="form-check-label" for="confirmCancelAck">
+                                    I understand this action is permanent.
+                                </label>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-danger" id="submitCancelBtn">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-danger" id="submitCancelBtn" disabled>
                                 <span class="btn-text">Confirm Cancellation</span>
                             </button>
                         </div>
@@ -320,6 +391,8 @@ if ($delivery_id <= 0) {
         <?php endif; ?>
         
         <?php endif; ?>
+<!-- Notes shown inline; modal removed per UX preference -->
+
 </div>
 
 <?php 
@@ -328,300 +401,198 @@ require_once __DIR__ . '/../templates/footer.php';
 ?>
 
 <script>
-// Helper function to show toast messages
-function showToast(message, type = 'success') {
-    const toastContainer = document.getElementById('toastContainer') || (() => {
-        const container = document.createElement('div');
-        container.id = 'toastContainer';
-        container.style.position = 'fixed';
-        container.style.top = '20px';
-        container.style.right = '20px';
-        container.style.zIndex = '9999';
-        document.body.appendChild(container);
-        return container;
-    })();
-
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0 show`;
-    toast.role = 'alert';
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-    
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    `;
-    
-    toastContainer.appendChild(toast);
-    
 document.addEventListener('DOMContentLoaded', function() {
-    // Function to show toast message
-    function showToast(type, message) {
-        const toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) return;
-        
-        const toast = document.createElement('div');
-        toast.className = `toast align-items-center text-white bg-${type} border-0`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-        
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        `;
-        
-        toastContainer.appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
-        
-        // Remove toast after it's hidden
-        toast.addEventListener('hidden.bs.toast', function() {
-            toast.remove();
-        });
+  // Notes are fully visible; no modal logic needed
+  // Toast utility
+  function ensureToastContainer() {
+    let c = document.getElementById('toastContainer');
+    if (!c) {
+      c = document.createElement('div');
+      c.id = 'toastContainer';
+      c.style.position = 'fixed';
+      c.style.top = '20px';
+      c.style.right = '20px';
+      c.style.zIndex = '1080';
+      document.body.appendChild(c);
+    }
+    return c;
+  }
+  function showToast(message, type = 'success') {
+    const container = ensureToastContainer();
+    const el = document.createElement('div');
+    el.className = `toast align-items-center text-white bg-${type} border-0`;
+    el.setAttribute('role', 'alert');
+    el.setAttribute('aria-live', 'assertive');
+    el.setAttribute('aria-atomic', 'true');
+    el.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">${message}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>`;
+    container.appendChild(el);
+    try {
+      const t = new bootstrap.Toast(el, { delay: 3000 });
+      t.show();
+      el.addEventListener('hidden.bs.toast', () => el.remove());
+    } catch (_) {
+      // Fallback if Bootstrap JS missing
+      setTimeout(() => el.remove(), 3000);
+    }
+  }
+
+  // Helpers
+  function setLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+      btn.dataset.orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+    } else {
+      if (btn.dataset.orig) btn.innerHTML = btn.dataset.orig;
+      btn.disabled = false;
+    }
+  }
+
+  // Confirm Delivery (AJAX with FormData; fallback to normal submit if non-JSON)
+  const confirmForm = document.getElementById('confirmDeliveryForm');
+  if (confirmForm) {
+    const receivedInputs = Array.from(confirmForm.querySelectorAll('.js-received'));
+    const deliveredByEl = document.getElementById('deliveredBy');
+    const receivedByEl = document.getElementById('receivedBy');
+    const submitConfirmBtn = document.getElementById('submitConfirmBtn');
+    const receiveAllBtn = document.querySelector('.js-receive-all');
+
+    function clampInputs() {
+      receivedInputs.forEach(inp => {
+        const min = inp.hasAttribute('min') ? parseInt(inp.getAttribute('min'), 10) : 0;
+        const max = inp.hasAttribute('max') ? parseInt(inp.getAttribute('max'), 10) : Number.MAX_SAFE_INTEGER;
+        let val = parseInt(inp.value || '0', 10);
+        if (Number.isNaN(val)) val = min;
+        if (val < min) val = min;
+        if (val > max) val = max;
+        if (String(val) !== inp.value) inp.value = String(val);
+      });
     }
 
-    // Handle cancel delivery form submission
-    const cancelForm = document.getElementById('cancelDeliveryForm');
-    const cancelModal = cancelForm ? bootstrap.Modal.getInstance(cancelForm.closest('.modal')) : null;
-    
-    if (cancelForm) {
-        cancelForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = this.querySelector('button[type="submit"]');
-            if (!submitBtn) return;
-            
-            // Show loading state
-            const spinner = submitBtn.querySelector('.spinner-border');
-            const btnText = submitBtn.querySelector('.btn-text');
-            
-            submitBtn.disabled = true;
-            spinner.classList.remove('d-none');
-            btnText.textContent = 'Processing...';
-            
-            try {
-                const formData = new FormData(this);
-                const response = await fetch('cancel_delivery.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showToast('success', result.message || 'Delivery cancelled successfully');
-                    if (cancelModal) {
-                        cancelModal.hide();
-                    }
-                    // Reload the page after a short delay
-                    setTimeout(() => window.location.reload(), 1500);
-                } else {
-                    showToast('danger', result.message || 'Failed to cancel delivery');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('danger', 'An error occurred while processing your request');
-            } finally {
-                // Reset button state
-                submitBtn.disabled = false;
-                spinner.classList.add('d-none');
-                btnText.textContent = 'Confirm Cancellation';
-            }
-            
-            // Show loading state
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            
-            try {
-                // Get form data
-                const formData = new FormData(this);
-                const formObject = {
-                    id: formData.get('id'),
-                    cancellation_reason: formData.get('cancellation_reason')
-                };
-                
-                // Show loading state
-                const originalBtnText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-                
-                try {
-                    // Send request
-                    const response = await fetch(this.action, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify(formObject)
-                    });
-                    
-                    // Clone the response to read it multiple times if needed
-                    const responseClone = response.clone();
-                    let result;
-                    
-                    try {
-                        // First try to parse as JSON
-                        result = await response.json();
-                    } catch (jsonError) {
-                        console.error('JSON Parse Error:', jsonError);
-                        // If JSON parse fails, try to get the response as text
-                        try {
-                            const text = await responseClone.text();
-                            console.error('Response text:', text);
-                            // If the response is HTML, it's likely an error page
-                            if (text.trim().startsWith('<!DOCTYPE') || text.includes('<html>')) {
-                                throw new Error('Server returned an error page. Please check the server logs.');
-                            }
-                            throw new Error(text || 'Invalid response from server');
-                        } catch (textError) {
-                            console.error('Error reading response as text:', textError);
-                            throw new Error('Failed to process server response');
-                        }
-                    }
-                    
-                    // Handle non-OK responses
-                    if (!response.ok) {
-                        const errorMsg = result?.message || `Server error: ${response.status} ${response.statusText}`;
-                        throw new Error(errorMsg);
-                    }
-                    
-                    // Handle successful response
-                    if (result.success) {
-                        showToast(result.message || 'Delivery has been cancelled successfully', 'success');
-                        
-                        // Close the modal
-                        if (cancelModal) {
-                            cancelModal.hide();
-                        }
-                        
-                        // Redirect or reload
-                        if (result.data?.redirect) {
-                            window.location.href = result.data.redirect;
-                        } else if (result.redirect) {
-                            window.location.href = result.redirect;
-                        } else {
-                            window.location.reload();
-                        }
-                    } else {
-                        throw new Error(result.message || 'Failed to cancel delivery');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    showToast(error.message || 'An error occurred while cancelling the delivery', 'danger');
-                    
-                    // Reset button state
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnText;
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast(error.message || 'An error occurred while cancelling the delivery', 'danger');
-                
-                // Reset button state
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-            }
-        });
+    function updateConfirmUI() {
+      clampInputs();
+      const namesOk = !!(deliveredByEl && deliveredByEl.value.trim().length) && !!(receivedByEl && receivedByEl.value.trim().length);
+      const qtyOk = receivedInputs.every(inp => {
+        const v = parseInt(inp.value || '0', 10);
+        const min = inp.hasAttribute('min') ? parseInt(inp.getAttribute('min'), 10) : 0;
+        const max = inp.hasAttribute('max') ? parseInt(inp.getAttribute('max'), 10) : Number.MAX_SAFE_INTEGER;
+        return !Number.isNaN(v) && v >= min && v <= max;
+      });
+      if (submitConfirmBtn) submitConfirmBtn.disabled = !(namesOk && qtyOk);
+      // invalid feedback toggles
+      if (deliveredByEl) deliveredByEl.classList.toggle('is-invalid', !deliveredByEl.value.trim().length);
+      if (receivedByEl) receivedByEl.classList.toggle('is-invalid', !receivedByEl.value.trim().length);
     }
-    
-    // Handle confirm delivery form submission
-    const confirmForm = document.getElementById('confirmDeliveryForm');
-    const confirmModal = confirmForm ? bootstrap.Modal.getInstance(confirmForm.closest('.modal')) : null;
-    
-    if (confirmForm) {
-        confirmForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = this.querySelector('button[type="submit"]');
-            if (!submitBtn) return;
-            
-            // Show loading state
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            
-            try {
-                // Get form data
-                const formData = new FormData(this);
-                const formObject = {
-                    id: formData.get('id'),
-                    status: 'delivered',
-                    delivered_by: formData.get('delivered_by'),
-                    received_by: formData.get('received_by'),
-                    notes: formData.get('notes'),
-                    received_quantities: {}
-                };
-                
-                // Add received quantities
-                formData.forEach((value, key) => {
-                    if (key.startsWith('received_quantities[')) {
-                        const itemId = key.match(/\[(\d+)\]/)[1];
-                        formObject.received_quantities[itemId] = value;
-                    }
-                });
-                
-                // Send request
-                const response = await fetch(this.action, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify(formObject)
-                });
-                
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    throw new Error('Invalid response from server');
-                }
-                
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
-                }
-                
-                if (result.success) {
-                    // Show success message
-                    showToast('Delivery has been confirmed successfully', 'success');
-                    
-                    // Close the modal
-                    if (confirmModal) {
-                        confirmModal.hide();
-                    }
-                    
-                    // Redirect to the same page to show updated status
-                    if (result.redirect) {
-                        window.location.href = result.redirect;
-                    } else {
-                        window.location.reload();
-                    }
-                } else {
-                    throw new Error(result.message || 'Failed to confirm delivery');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast(error.message || 'An error occurred while confirming the delivery', 'danger');
-                
-                // Reset button state
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-            }
-        });
+
+    // Receive all button
+    if (receiveAllBtn) {
+      receiveAllBtn.addEventListener('click', () => {
+        receivedInputs.forEach(inp => { if (inp.hasAttribute('max')) inp.value = inp.getAttribute('max'); });
+        updateConfirmUI();
+      });
     }
+
+    // Live listeners
+    receivedInputs.forEach(inp => inp.addEventListener('input', updateConfirmUI));
+    if (deliveredByEl) deliveredByEl.addEventListener('input', updateConfirmUI);
+    if (receivedByEl) receivedByEl.addEventListener('input', updateConfirmUI);
+    // Re-evaluate on modal show
+    const confirmModal = document.getElementById('confirmDeliveryModal');
+    if (confirmModal) confirmModal.addEventListener('shown.bs.modal', updateConfirmUI);
+
+    confirmForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const submitBtn = this.querySelector('button[type="submit"]');
+      setLoading(submitBtn, true);
+      try {
+        const fd = new FormData(this);
+        const res = await fetch(this.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          // Fallback to normal submission if server didn't return JSON
+          setLoading(submitBtn, false);
+          this.submit();
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to confirm delivery');
+        showToast(data.message || 'Delivery confirmed', 'success');
+        try { bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmDeliveryModal')).hide(); } catch(_){ }
+        setTimeout(() => {
+          if (data.redirect) window.location.href = data.redirect; else window.location.reload();
+        }, 800);
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || 'An error occurred', 'danger');
+        setLoading(submitBtn, false);
+      }
+    });
+  }
+
+  // Cancel Delivery (validation + AJAX with FormData; fallback)
+  const cancelForm = document.getElementById('cancelDeliveryForm');
+  if (cancelForm) {
+    const reasonEl = document.getElementById('cancellation_reason');
+    const reasonCountEl = document.getElementById('cancelReasonCount');
+    const ackEl = document.getElementById('confirmCancelAck');
+    const modalEl = document.getElementById('cancelDeliveryModal');
+    const submitBtnInit = cancelForm.querySelector('#submitCancelBtn') || cancelForm.querySelector('button[type="submit"]');
+
+    function updateCancelUI() {
+      const len = (reasonEl?.value || '').trim().length;
+      if (reasonCountEl) reasonCountEl.textContent = String(len);
+      const ok = len >= 5 && (!!ackEl && ackEl.checked);
+      if (submitBtnInit) submitBtnInit.disabled = !ok;
+    }
+
+    // Quick reason buttons
+    document.querySelectorAll('.js-reason').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!reasonEl) return;
+        const toAdd = btn.getAttribute('data-reason') || '';
+        const cur = (reasonEl.value || '').trim();
+        reasonEl.value = cur ? (cur + (cur.endsWith('.') ? ' ' : ' ') + toAdd) : toAdd;
+        reasonEl.dispatchEvent(new Event('input'));
+      });
+    });
+
+    // Live validation
+    reasonEl && reasonEl.addEventListener('input', updateCancelUI);
+    ackEl && ackEl.addEventListener('change', updateCancelUI);
+    // When modal opens, recalc
+    if (modalEl) {
+      modalEl.addEventListener('shown.bs.modal', updateCancelUI);
+    }
+
+    cancelForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const submitBtn = this.querySelector('#submitCancelBtn') || this.querySelector('button[type="submit"]');
+      setLoading(submitBtn, true);
+      try {
+        const fd = new FormData(this);
+        const res = await fetch(this.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          setLoading(submitBtn, false);
+          this.submit();
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to cancel delivery');
+        showToast(data.message || 'Delivery cancelled', 'success');
+        try { bootstrap.Modal.getOrCreateInstance(document.getElementById('cancelDeliveryModal')).hide(); } catch(_){ }
+        setTimeout(() => { if (data.redirect) window.location.href = data.redirect; else window.location.reload(); }, 800);
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || 'An error occurred', 'danger');
+        setLoading(submitBtn, false);
+      }
+    });
+  }
 });
 </script>

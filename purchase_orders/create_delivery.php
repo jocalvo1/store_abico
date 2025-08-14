@@ -155,12 +155,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_delivery'])) {
             
             $stmt->close();
             
-            // Update PO status if all items are delivered
+            // Update PO status if all items are delivered (based on confirmed received quantities)
             $query = "
                 SELECT 
                     poi.id,
                     poi.quantity as ordered_quantity,
-                    COALESCE(SUM(di.quantity), 0) as delivered_quantity
+                    COALESCE(SUM(di.received_quantity), 0) as delivered_quantity
                 FROM purchase_order_items poi
                 LEFT JOIN delivery_items di ON poi.id = di.purchase_order_item_id
                 WHERE poi.purchase_order_id = ?
@@ -247,12 +247,54 @@ require_once __DIR__ . '/../templates/header.php';
                             <p class="mb-0"><strong>Order Date:</strong> <?php echo date('M d, Y', strtotime($purchase_order['order_date'])); ?></p>
                         </div>
                         <div class="col-md-4">
-                            <h6>Order Status</h6>
-                            <p class="mb-1">
-                                <span class="badge bg-<?php echo $purchase_order['status'] === 'completed' ? 'success' : 'warning'; ?>">
-                                    <?php echo ucfirst($purchase_order['status']); ?>
+                            <?php
+                                // Compute PO summary numbers from $po_items (allocated includes pending deliveries)
+                                $po_total_ordered = 0;
+                                $po_total_allocated = 0;
+                                $po_total_remaining = 0;
+                                if (!empty($po_items)) {
+                                    foreach ($po_items as $pi) {
+                                        $po_total_ordered += (float)($pi['ordered_quantity'] ?? 0);
+                                        $po_total_allocated += (float)($pi['delivered_quantity'] ?? 0);
+                                        $po_total_remaining += (float)($pi['remaining_quantity'] ?? 0);
+                                    }
+                                }
+                            ?>
+                            <h6 class="mb-2">PO Summary</h6>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <span class="badge bg-light text-dark border" data-bs-toggle="tooltip" title="Total ordered quantity across all PO items">
+                                    Ordered: <?php echo rtrim(rtrim(number_format($po_total_ordered, 2), '0'), '.'); ?>
                                 </span>
-                            </p>
+                                <span class="badge bg-light text-dark border" data-bs-toggle="tooltip" title="Allocated = Confirmed received + Pending deliveries">
+                                    Allocated: <?php echo rtrim(rtrim(number_format($po_total_allocated, 2), '0'), '.'); ?>
+                                </span>
+                                <span class="badge bg-<?php echo $po_total_remaining > 0 ? 'warning' : 'success'; ?>" data-bs-toggle="tooltip" title="Remaining = Ordered - Allocated">
+                                    Remaining: <?php echo rtrim(rtrim(number_format($po_total_remaining, 2), '0'), '.'); ?>
+                                </span>
+                            </div>
+                            <?php 
+                                $progress = 0; 
+                                if ($po_total_ordered > 0) {
+                                    $progress = max(0, min(100, ($po_total_allocated / $po_total_ordered) * 100));
+                                }
+                            ?>
+                            <div class="mt-2">
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar <?php echo $progress >= 100 ? 'bg-success' : 'bg-warning'; ?>" role="progressbar" style="width: <?php echo number_format($progress, 2); ?>%" aria-valuenow="<?php echo number_format($progress, 2); ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mt-1">
+                                    <span>Allocation progress</span>
+                                    <span><?php echo number_format($progress, 0); ?>%</span>
+                                </div>
+                            </div>
+                            <div class="text-muted small mt-2">
+                                This delivery will be created as <span class="badge bg-warning text-dark align-text-top">Pending</span>.
+                            </div>
+                            <?php if (empty($po_items)): ?>
+                                <div class="text-muted small mt-1">
+                                    No items available to schedule. All quantities are fully allocated to deliveries (including pending).
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
@@ -263,16 +305,12 @@ require_once __DIR__ . '/../templates/header.php';
                         </div>
                     </div>
 
+                <?php if (!empty($po_items)): ?>
                 <div class="card mb-4">
                     <div class="card-header">
                         <h6 class="mb-0">Delivery Items</h6>
                     </div>
                     <div class="card-body p-0">
-                        <?php if (empty($po_items)): ?>
-                            <div class="alert alert-warning m-3">
-                                <i class="fas fa-exclamation-triangle"></i> All items in this purchase order have been fully delivered.
-                            </div>
-                        <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table table-hover mb-0" id="itemsTable">
                                     <thead class="table-light">
@@ -298,11 +336,15 @@ require_once __DIR__ . '/../templates/header.php';
                                         ?>
                                             <tr>
                                                 <td>
-                                                    <div class="fw-semibold"><?php echo htmlspecialchars($item['item_name']); ?></div>
+                                                    <div class="fw-semibold d-flex align-items-center gap-2">
+                                                        <span><?php echo htmlspecialchars($item['item_name']); ?></span>
+                                                        <span class="badge bg-light text-muted border" title="Unit">
+                                                            <?php echo htmlspecialchars(preg_replace('/\s+/', '', $item['unit'])); ?>
+                                                        </span>
+                                                    </div>
                                                     <?php if (!empty($item['item_description'])): ?>
                                                         <div class="text-muted small"><?php echo htmlspecialchars($item['item_description']); ?></div>
                                                     <?php endif; ?>
-                                                    <div class="text-muted small"><?php echo htmlspecialchars($item['unit']); ?></div>
                                                     <input type="hidden" name="item_ids[]" value="<?php echo $item['id']; ?>">
                                                 </td>
                                                 <td class="align-middle">
@@ -315,14 +357,20 @@ require_once __DIR__ . '/../templates/header.php';
                                                     <?php echo number_format($item['remaining_quantity']); ?>
                                                 </td>
                                                 <td class="align-middle">
-                                                    <input type="number" 
-                                                        class="form-control form-control-sm quantity-input" 
-                                                        name="item_quantities[<?php echo $item['id']; ?>]" 
-                                                        value="<?php echo $quantity; ?>" 
-                                                        min="0" 
-                                                        max="<?php echo $item['remaining_quantity']; ?>" 
-                                                        step="0.01"
-                                                        data-unit-price="<?php echo $item['unit_price']; ?>">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" 
+                                                            class="form-control form-control-sm quantity-input" 
+                                                            name="item_quantities[<?php echo $item['id']; ?>]" 
+                                                            value="<?php echo $quantity; ?>" 
+                                                            min="0" 
+                                                            max="<?php echo $item['remaining_quantity']; ?>" 
+                                                            step="0.01"
+                                                            placeholder="0"
+                                                            data-remaining="<?php echo $item['remaining_quantity']; ?>"
+                                                            data-unit-price="<?php echo $item['unit_price']; ?>">
+                                                        <span class="input-group-text"><?php echo htmlspecialchars(preg_replace('/\s+/', '', $item['unit'])); ?></span>
+                                                    </div>
+                                                    <div class="invalid-feedback d-block d-none">Exceeds remaining quantity</div>
                                                 </td>
                                                 <td class="align-middle">
                                                     ₱<?php echo number_format($item['unit_price'], 2); ?>
@@ -341,9 +389,9 @@ require_once __DIR__ . '/../templates/header.php';
                                     </tfoot>
                                 </table>
                             </div>
-                        <?php endif; ?>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
                     <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-outline-secondary me-md-2">
@@ -361,54 +409,94 @@ require_once __DIR__ . '/../templates/header.php';
 </div>
 
 <script>
-// Add JavaScript for dynamic calculations
+// Add JavaScript for dynamic calculations and validation
 document.addEventListener('DOMContentLoaded', function() {
     const quantityInputs = document.querySelectorAll('.quantity-input');
-    
-    function calculateTotals() {
+    const saveBtn = document.querySelector('button[name="save_delivery"]');
+
+    function formatCurrency(num) {
+        try {
+            return num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } catch (e) {
+            return (Math.round(num * 100) / 100).toFixed(2);
+        }
+    }
+
+    function validateAndTotals() {
         let total = 0;
-        
+        let anyInvalid = false;
+        let anyPositive = false;
+
         quantityInputs.forEach(input => {
             const row = input.closest('tr');
-            const quantity = parseFloat(input.value) || 0;
+            const value = parseFloat(input.value);
+            const quantity = isNaN(value) ? 0 : value;
             const unitPrice = parseFloat(input.dataset.unitPrice) || 0;
+            const max = parseFloat(input.getAttribute('max')) || 0;
+            const feedback = row.querySelector('.invalid-feedback');
+
+            // validation UI
+            if (quantity > max) {
+                input.classList.add('is-invalid');
+                if (feedback) feedback.classList.remove('d-none');
+                anyInvalid = true;
+            } else if (quantity < 0) {
+                input.classList.add('is-invalid');
+                if (feedback) feedback.classList.remove('d-none');
+                anyInvalid = true;
+            } else {
+                input.classList.remove('is-invalid');
+                if (feedback) feedback.classList.add('d-none');
+            }
+
+            if (quantity > 0) anyPositive = true;
+
+            // line total
             const lineTotal = quantity * unitPrice;
-            
-            // Update line total
             const lineTotalEl = row.querySelector('.line-total-amount');
             if (lineTotalEl) {
-                lineTotalEl.textContent = lineTotal.toFixed(2);
+                lineTotalEl.textContent = formatCurrency(lineTotal);
             }
-            
-            // Add to total
             total += lineTotal;
         });
-        
+
         // Update total amount
         const totalAmountEl = document.getElementById('totalAmount');
         if (totalAmountEl) {
-            totalAmountEl.textContent = '₱' + total.toFixed(2);
+            totalAmountEl.textContent = '₱' + formatCurrency(total);
+        }
+
+        // Disable save if invalid or all zeros
+        if (saveBtn) {
+            saveBtn.disabled = anyInvalid || !anyPositive;
         }
     }
-    
-    // Add event listeners
+
+    // Event listeners
     quantityInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            const max = parseFloat(this.max) || 0;
-            const value = parseFloat(this.value) || 0;
-            
-            if (value > max) {
-                this.value = max;
-            } else if (value < 0) {
+        input.addEventListener('input', validateAndTotals);
+        input.addEventListener('blur', function() {
+            // normalize negatives to 0 on blur
+            if (parseFloat(this.value) < 0 || isNaN(parseFloat(this.value))) {
                 this.value = 0;
+                validateAndTotals();
             }
-            
-            calculateTotals();
         });
     });
-    
-    // Initial calculation
-    calculateTotals();
+
+    // Initial run
+    validateAndTotals();
+
+    // Initialize Bootstrap tooltips if available
+    try {
+        if (window.bootstrap && bootstrap.Tooltip) {
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                new bootstrap.Tooltip(el);
+            });
+        }
+    } catch (e) {
+        // no-op
+    }
 });
 </script>
 
