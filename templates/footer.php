@@ -1,3 +1,4 @@
+<?php /* footer template */ ?>
 </div><!-- End of .main-content -->
 
 <!-- Bootstrap 5 JS Bundle with Popper -->

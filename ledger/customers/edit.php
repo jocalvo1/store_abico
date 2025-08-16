@@ -12,7 +12,6 @@ if (!isset($_SESSION['user_id'])) {
 
 // Include required files
 require_once __DIR__ . '/../../includes/database.php';
-require_once __DIR__ . '/../../templates/header.php';
 // Initialize variables
 $errors = [];
 $success = '';
@@ -69,7 +68,8 @@ $customer = $result->fetch_assoc();
 $stmt->close();
 $conn->close();
 
-// Include header after all processing is done
+// Include header after all processing is done (no redirects pending)
+require_once __DIR__ . '/../../templates/header.php';
 ?>
 
 <div class="container-fluid px-4">

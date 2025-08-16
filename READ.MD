@@ -186,13 +186,15 @@ Inventory
  <!-- - Products -->
  <!-- - Stock Movements -->
 Purchase Orders
- - Purchase Order List
- - Deliveries
+ <!-- - Purchase Order List -->
+ <!-- - Deliveries -->
 Sales
  <!-- - Sales Transaction -->
  <!-- - Create New Sale -->
 Ledger
- - Customers
+ - Customers / May problema indi dayon ga return sa index.php after mag add
  - Suppliers
  - Check Exchanges
  - Payments
+
+

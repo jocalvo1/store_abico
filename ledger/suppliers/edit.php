@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // If no errors, update the database using the controller
     if (empty($errors)) {
-        require_once __DIR__ . '/../../controller/supplier/SupplierController.php';
+        require_once __DIR__ . '/../../controller/supplier/supplierController.php';
         $supplierController = new SupplierController();
         
         $data = [

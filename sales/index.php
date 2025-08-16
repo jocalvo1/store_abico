@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 // Include required files
 require_once __DIR__ . '/../templates/header.php';
 require_once __DIR__ . '/../includes/database.php';
-require_once __DIR__ . '/../controller/sale/SalesController.php';
+require_once __DIR__ . '/../controller/sale/salesController.php';
 
 // Initialize SalesController with DB connection
 $db = getDBConnection();

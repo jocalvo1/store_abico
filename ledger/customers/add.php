@@ -11,7 +11,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require_once __DIR__ . '/../../includes/database.php';
-require_once __DIR__ . '/../../templates/header.php';
 
 $errors = [];
 $success = '';
@@ -62,6 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->close();
     }
 }
+// Include header only after potential redirects are done
+require_once __DIR__ . '/../../templates/header.php';
 ?>
 
 <div class="container-fluid px-4">

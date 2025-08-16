@@ -150,6 +150,66 @@
     border: 1px solid rgba(0,0,0,.05);
 }
 
+/* ===== Dashboard Stat Cards ===== */
+.stat-card {
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow);
+    transition: transform .2s ease, box-shadow .2s ease;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 2rem rgba(0,0,0,.12);
+}
+
+.stat-card .card-body {
+    padding: 1.1rem 1.25rem;
+    position: relative;
+}
+
+.stat-card .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,.25);
+}
+
+.stat-card.bg-primary .stat-icon { background: rgba(255,255,255,.25); }
+.stat-card.bg-success .stat-icon { background: rgba(255,255,255,.25); }
+.stat-card.bg-info .stat-icon { background: rgba(255,255,255,.25); }
+.stat-card.bg-warning .stat-icon { background: rgba(255,255,255,.25); }
+
+.stat-muted { opacity: .85; }
+
+/* Light cards */
+.stat-card.border-0:not(.text-white) {
+    border: 1px solid #eef1f7 !important;
+}
+
+.stat-card i {
+    opacity: .95;
+}
+
+/* Anchor-wrapped cards should not change text color on hover */
+a.text-reset .stat-card:hover { color: inherit; text-decoration: none; }
+
+/* Soft background utilities */
+.bg-soft-primary { background: rgba(13,110,253,.10) !important; }
+.bg-soft-success { background: rgba(25,135,84,.10) !important; }
+.bg-soft-info    { background: rgba(13,202,240,.12) !important; }
+.bg-soft-warning { background: rgba(255,193,7,.16) !important; }
+.bg-soft-danger  { background: rgba(220,53,69,.14) !important; }
+.bg-soft-secondary { background: rgba(108,117,125,.12) !important; }
+
+/* Icon circle background for light cards */
+.stat-card:not(.text-white) .stat-icon {
+    background: rgba(0,0,0,.05);
+}
+
 /* User Dropdown */
 .navbar-nav .user-dropdown .dropdown-toggle::after {
     display: inline-block !important;

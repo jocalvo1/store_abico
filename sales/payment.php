@@ -91,7 +91,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // GET: load sale and debt details
-$saleId = isset($_GET['sale_id']) ? (int)$_GET['sale_id'] : (isset($_POST['sale_id']) ? (int)$_POST['sale_id'] : 0);
+// Read sale_id from GET or POST plainly to avoid nested ternary parsing quirks
+$saleId = 0;
+if (isset($_GET['sale_id'])) {
+    $saleId = (int)$_GET['sale_id'];
+} elseif (isset($_POST['sale_id'])) {
+    $saleId = (int)$_POST['sale_id'];
+}
+// Fallback: allow debt_id to resolve to its sale_id
+if ($saleId <= 0 && isset($_GET['debt_id'])) {
+    $debtId = (int)$_GET['debt_id'];
+    if ($debtId > 0) {
+        $stmt = $db->prepare('SELECT sales_transaction_id FROM sales_debts WHERE id = ?');
+        if ($stmt) {
+            $stmt->bind_param('i', $debtId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($row = $res->fetch_assoc()) { $saleId = (int)$row['sales_transaction_id']; }
+            $res->free();
+            $stmt->close();
+        }
+    }
+}
 if ($saleId <= 0) {
     require_once __DIR__ . '/../templates/header.php';
     echo '<div class="container-fluid py-4"><div class="alert alert-danger">Invalid sale ID.</div></div>';

@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // Include required files
 require_once __DIR__ . '/../../templates/header.php';
-require_once __DIR__ . '/../../controller/supplier/SupplierController.php';
+require_once __DIR__ . '/../../controller/supplier/supplierController.php';
 
 // Initialize SupplierController
 $supplierController = new SupplierController();

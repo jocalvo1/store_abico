@@ -96,8 +96,4 @@ function authenticateUser($username, $password) {
     return false;
 }
 
-// Include this file in pages that need authentication
-// require_once __DIR__ . '/controller/loginController.php';
-// requireLogin(); // For pages that require login
-// requireRole('admin'); // For pages that require specific role
 ?>
