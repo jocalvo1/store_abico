@@ -525,7 +525,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
     <!-- System Overview Cards (top) -->
     <div class="col-12 mb-4">
         <div class="row g-3">
-            <div class="col-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-2">
                 <a href="inventory/products/index.php" class="text-decoration-none text-reset">
                 <div class="card stat-card border-0 shadow-sm">
                     <div class="card-body">
@@ -540,7 +540,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 </div>
                 </a>
             </div>
-            <div class="col-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-2">
                 <a href="purchase_orders/index.php" class="text-decoration-none text-reset">
                 <div class="card stat-card border-0 shadow-sm">
                     <div class="card-body">
@@ -555,7 +555,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 </div>
                 </a>
             </div>
-            <div class="col-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-2">
                 <a href="sales/index.php" class="text-decoration-none text-reset">
                 <div class="card stat-card border-0 shadow-sm">
                     <div class="card-body">
@@ -570,7 +570,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 </div>
                 </a>
             </div>
-            <div class="col-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-2">
                 <a href="ledger/customers/index.php" class="text-decoration-none text-reset">
                 <div class="card stat-card border-0 shadow-sm">
                     <div class="card-body">
@@ -585,7 +585,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 </div>
                 </a>
             </div>
-            <div class="col-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-2">
                 <a href="ledger/suppliers/index.php" class="text-decoration-none text-reset">
                 <div class="card stat-card border-0 shadow-sm">
                     <div class="card-body">
@@ -600,7 +600,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 </div>
                 </a>
             </div>
-            <div class="col-6 col-md-2">
+            <div class="col-12 col-sm-6 col-md-2">
                 <a href="deliveries/index.php" class="text-decoration-none text-reset">
                 <div class="card stat-card border-0 shadow-sm">
                     <div class="card-body">
@@ -693,7 +693,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-fire text-danger me-2"></i>Popular Items</h5>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
                             <label for="popularMetric" class="me-1 small text-muted">Metric</label>
                             <select id="popularMetric" class="form-select form-select-sm" style="min-width: 140px;">
                                 <option value="qty" selected>By Quantity</option>
@@ -710,7 +710,7 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                         <div class="p-3" id="popularChartWrap">
                             <canvas id="popularChart" height="220" aria-label="Popular Items Chart"></canvas>
                         </div>
-                        <div class="table-responsive" id="popularTableWrap" style="max-height: 420px; overflow: auto; display: none;">
+                        <div class="table-responsive w-100" id="popularTableWrap" style="max-height: 420px; overflow-x: auto; overflow-y: auto; display: none;">
                             <table class="table table-sm table-hover mb-0 align-middle" id="popularTable">
                                 <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                                     <tr>
@@ -729,71 +729,83 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 </div>
             </div>
             <div class="col-12 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
+                <div class="card border-0 shadow-sm h-100 inventory-alerts">
+                    <?php
+                        // Build a single combined, deduped list and derive groups and counts once
+                        $combined = [];
+                        $seenOut = [];
+                        foreach ($outOfStockItems as $it) {
+                            $it['__status'] = 'out';
+                            $combined[] = $it;
+                            $key = strtolower(trim((string)($it['name'] ?? '')));
+                            if ($key !== '') { $seenOut[$key] = true; }
+                        }
+                        foreach ($lowStockItems as $it) {
+                            $key = strtolower(trim((string)($it['name'] ?? '')));
+                            if ($key !== '' && isset($seenOut[$key])) { continue; }
+                            $it['__status'] = 'low';
+                            $combined[] = $it;
+                        }
+                        // sort: out first, then by stock asc, then name
+                        usort($combined, function($a,$b){
+                            $priority = ['out'=>0,'low'=>1];
+                            $pa = $priority[$a['__status']] ?? 2; $pb = $priority[$b['__status']] ?? 2;
+                            if ($pa !== $pb) return $pa - $pb;
+                            $sa = (int)$a['current_stock']; $sb = (int)$b['current_stock'];
+                            if ($sa !== $sb) return $sa - $sb;
+                            return strcasecmp($a['name'], $b['name']);
+                        });
+                        $combined = array_slice($combined, 0, 15);
+                        // Split into groups for rendering
+                        $outs = []; $lows = [];
+                        foreach ($combined as $it) { (($it['__status'] ?? '') === 'out') ? $outs[] = $it : $lows[] = $it; }
+                        $alertBadgeCount = count($combined);
+                    ?>
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-triangle-exclamation text-warning me-2"></i>Inventory Alerts
-                            <span class="badge bg-warning text-dark ms-2"><?= number_format($lowStockCount + $outOfStockCount) ?></span>
+                            <span class="badge bg-warning text-dark ms-2"><?= number_format($alertBadgeCount) ?></span>
                         </h5>
-                        <a href="inventory/products/index.php" class="small text-decoration-none"><i class="fas fa-arrow-up-right-from-square me-1"></i>View all</a>
+                        <a href="inventory/products/index.php" class="small text-decoration-none" aria-label="View all" title="View all">
+                            <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                            <span class="d-none d-sm-inline">View all</span>
+                        </a>
                     </div>
                     <div class="card-body p-0">
-                        <?php 
-                    // build combined list (max 15)
-                    $combined = [];
-                    foreach ($outOfStockItems as $it) { $it['__status'] = 'out'; $combined[] = $it; }
-                    foreach ($lowStockItems as $it) { $it['__status'] = 'low'; $combined[] = $it; }
-                    // sort: out first, then by stock asc, then name
-                    usort($combined, function($a,$b){
-                        $priority = ['out'=>0,'low'=>1];
-                        $pa = $priority[$a['__status']] ?? 2; $pb = $priority[$b['__status']] ?? 2;
-                        if ($pa !== $pb) return $pa - $pb;
-                        $sa = (int)$a['current_stock']; $sb = (int)$b['current_stock'];
-                        if ($sa !== $sb) return $sa - $sb;
-                        return strcasecmp($a['name'], $b['name']);
-                    });
-                    $combined = array_slice($combined, 0, 15);
-                    // Split into groups
-                    $outs = [];
-                    $lows = [];
-                    foreach ($combined as $it) {
-                        if (($it['__status'] ?? '') === 'out') { $outs[] = $it; }
-                        else { $lows[] = $it; }
-                    }
-                    ?>
-                    <?php if (empty($combined)): ?>
-                        <div class="p-3 text-muted">No items require attention</div>
-                    <?php else: ?>
-                        <div class="px-0" style="max-height: 420px; overflow: auto;">
-                            <?php if (!empty($outs)): ?>
-                                <div class="px-3 py-2 bg-light border-top small fw-semibold" style="position: sticky; top: 0; z-index: 1;">Out of stock <span class="badge bg-danger ms-2"><?= count($outs) ?></span></div>
-                                <ul class="list-group list-group-flush">
-                                    <?php foreach ($outs as $it): ?>
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            <div class="me-3">
-                                                <div class="fw-semibold"><?= htmlspecialchars($it['name']) ?></div>
-                                                <div class="small text-muted">Stock: <?= (int)$it['current_stock'] ?> • Reorder at <?= (int)$it['reorder_level'] ?></div>
-                                            </div>
-                                            <span class="badge bg-danger">Out</span>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            <?php endif; ?>
-                            <?php if (!empty($lows)): ?>
-                                <div class="px-3 py-2 bg-light border-top small fw-semibold" style="position: sticky; top: <?= !empty($outs) ? '0' : '0' ?>; z-index: 1;">Low stock <span class="badge bg-warning text-dark ms-2"><?= count($lows) ?></span></div>
-                                <ul class="list-group list-group-flush">
-                                    <?php foreach ($lows as $it): ?>
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            <div class="me-3">
-                                                <div class="fw-semibold"><?= htmlspecialchars($it['name']) ?></div>
-                                                <div class="small text-muted">Stock: <?= (int)$it['current_stock'] ?> • Reorder at <?= (int)$it['reorder_level'] ?></div>
-                                            </div>
-                                            <span class="badge bg-warning text-dark">Low</span>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
+                        <?php // lists already computed above: $combined, $outs, $lows ?>
+                        <?php if (empty($combined)): ?>
+                            <div class="p-3 text-muted">No items require attention</div>
+                        <?php else: ?>
+                            <div class="px-0 alerts-scroll" style="max-height: 420px; overflow: auto;">
+                                <?php if (!empty($outs)): ?>
+                                    <div class="px-3 py-2 bg-light border-top small fw-semibold" style="position: sticky; top: 0; z-index: 1;">Out of stock <span class="badge bg-danger ms-2"><?= count($outs) ?></span></div>
+                                    <ul class="list-group list-group-flush">
+                                        <?php foreach ($outs as $it): ?>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                <div class="me-3">
+                                                    <div class="fw-semibold"><?= htmlspecialchars($it['name']) ?></div>
+                                                    <div class="small text-muted">Stock: <?= (int)$it['current_stock'] ?> • Reorder at <?= (int)$it['reorder_level'] ?></div>
+                                                </div>
+                                                <span class="badge bg-danger">Out</span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php endif; ?>
+                                <?php if (!empty($lows)): ?>
+                                    <div class="px-3 py-2 bg-light border-top small fw-semibold" style="position: sticky; top: 0; z-index: 1;">Low stock <span class="badge bg-warning text-dark ms-2"><?= count($lows) ?></span></div>
+                                    <ul class="list-group list-group-flush">
+                                        <?php foreach ($lows as $it): ?>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                <div class="me-3">
+                                                    <div class="fw-semibold"><?= htmlspecialchars($it['name']) ?></div>
+                                                    <div class="small text-muted">Stock: <?= (int)$it['current_stock'] ?> • Reorder at <?= (int)$it['reorder_level'] ?></div>
+                                                </div>
+                                                <span class="badge bg-warning text-dark">Low</span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -807,7 +819,13 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Today's Deliveries</h5>
-                        <span class="badge bg-secondary">Pending: <?= number_format($delivCounts['pending_today']) ?></span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary">Pending: <?= number_format($delivCounts['pending_today']) ?></span>
+                            <a href="deliveries/index.php" class="small text-decoration-none" aria-label="View all" title="View all">
+                                <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                                <span class="d-none d-sm-inline">View all</span>
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body p-0">
                         <?php if (empty($deliveriesToday)): ?>
@@ -851,25 +869,28 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 </div>
             </div>
             <div class="col-12 col-lg-7">
-                <div class="card border-0 shadow-sm h-100">
+                <div class="card border-0 shadow-sm h-100 outstanding-balances">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-users text-primary me-2"></i>Customers with Outstanding Balance</h5>
-                        <a href="ledger/customers/index.php" class="small text-decoration-none"><i class="fas fa-book me-1"></i>Open Ledger</a>
+                        <h5 class="mb-0">Customers with Outstanding Balance</h5>
+                        <a href="ledger/customers/index.php" class="small text-decoration-none" aria-label="View all" title="View all">
+                            <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                            <span class="d-none d-sm-inline">View all</span>
+                        </a>
                     </div>
                     <div class="card-body p-0">
                         <?php
-                        try {
-                            $sql = "SELECT c.id, c.name, SUM(sd.balance_due) AS balance, COUNT(*) AS debts, MIN(sd.due_date) AS next_due
-                                    FROM sales_debts sd
-                                    JOIN customers c ON c.id = sd.customer_id
-                                    WHERE sd.balance_due > 0 AND sd.status IN ('unpaid','partial')
-                                    GROUP BY c.id, c.name
-                                    ORDER BY balance DESC
-                                    LIMIT 10";
-                            $res = $db->query($sql);
-                            $debtors = [];
-                            if ($res) { while ($row = $res->fetch_assoc()) { $debtors[] = $row; } }
-                        } catch (Exception $e) { $debtors = []; }
+                            try {
+                                $sql = "SELECT c.id, c.name, SUM(sd.balance_due) AS balance, COUNT(*) AS debts, MIN(sd.due_date) AS next_due
+                                        FROM sales_debts sd
+                                        JOIN customers c ON c.id = sd.customer_id
+                                        WHERE sd.balance_due > 0 AND sd.status IN ('unpaid','partial')
+                                        GROUP BY c.id, c.name
+                                        ORDER BY balance DESC
+                                        LIMIT 10";
+                                $res = $db->query($sql);
+                                $debtors = [];
+                                if ($res) { while ($row = $res->fetch_assoc()) { $debtors[] = $row; } }
+                            } catch (Exception $e) { $debtors = []; }
                         ?>
                         <?php if (empty($debtors)): ?>
                             <div class="text-center text-muted py-4">No outstanding balances</div>
@@ -879,17 +900,17 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                                     <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                                         <tr>
                                             <th>Customer</th>
-                                            <th class="text-end">Outstanding</th>
-                                            <th class="text-end">Debts</th>
+                                            <th class="text-end text-nowrap">Outstanding</th>
+                                            <th class="text-end d-none d-sm-table-cell">Debts</th>
                                             <th class="text-nowrap">Next Due</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($debtors as $d): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($d['name'] ?? '') ?></td>
-                                                <td class="text-end">₱<?= number_format((float)($d['balance'] ?? 0), 2) ?></td>
-                                                <td class="text-end"><?= number_format((int)($d['debts'] ?? 0)) ?></td>
+                                                <td class="customer-name"><span class="name"><?= htmlspecialchars($d['name'] ?? '') ?></span></td>
+                                                <td class="text-end text-nowrap">₱<?= number_format((float)($d['balance'] ?? 0), 2) ?></td>
+                                                <td class="text-end d-none d-sm-table-cell"><?= number_format((int)($d['debts'] ?? 0)) ?></td>
                                                 <td class="text-nowrap">
                                                     <?= htmlspecialchars($d['next_due'] ?? '') ?: '—' ?>
                                                 </td>
@@ -935,6 +956,8 @@ document.addEventListener('DOMContentLoaded', function(){
           }]
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             y: { beginAtZero: true, ticks: { callback: (v)=>'₱' + Number(v).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}) } },
@@ -1017,6 +1040,18 @@ document.addEventListener('DOMContentLoaded', function(){
         } catch (err) { console.error(err); }
       }
 
+      // Debounced resize to ensure chart expands when viewport grows
+      function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), ms); }; }
+      const handleResize = debounce(()=>{ try { chart.resize(); } catch(e){} try { if (popularChart) popularChart.resize(); } catch(e){} }, 100);
+      window.addEventListener('resize', handleResize);
+
+      // Observe container size changes as well (e.g., grid column changes)
+      try {
+        const ro = new ResizeObserver(()=>{ try { chart.resize(); } catch(e){} });
+        const parentEl = ctx.parentElement || ctx;
+        if (parentEl) ro.observe(parentEl);
+      } catch(e) { /* ResizeObserver not supported */ }
+
       async function loadPopular() {
         try {
           const range = rangeSel?.value || 'week';
@@ -1038,19 +1073,14 @@ document.addEventListener('DOMContentLoaded', function(){
             const showChart = view === 'chart';
             chartWrap.style.display = showChart ? '' : 'none';
             tableWrap.style.display = showChart ? 'none' : '';
+            // Ensure chart resizes correctly when becoming visible
+            if (showChart && popularChart) { requestAnimationFrame(()=>{ try { popularChart.resize(); } catch(e){} }); }
           }
           if (!tbody) return;
           tbody.innerHTML = '';
           const items = Array.isArray(json.items) ? json.items : [];
           if (items.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No data</td></tr>';
-            // Also clear chart if visible
-            if (popularChart && popularChartCanvas) {
-              popularChart.data.labels = [];
-              popularChart.data.datasets[0].data = [];
-              popularChart.update();
-            }
-            return;
           }
           items.forEach((it, idx)=>{
             const tr = document.createElement('tr');
@@ -1065,8 +1095,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
           // Update/Create Popular Items Bar Chart
           if (popularChartCanvas) {
-            const labels = items.map(it => String(it.name||''));
-            const data = items.map(it => metric === 'revenue' ? Number(it.revenue||0) : Number(it.qty||0));
+            const itemsForChart = items.length ? items : [{ name: 'No data', qty: 0, revenue: 0 }];
+            const labels = itemsForChart.map(it => String(it.name||''));
+            const data = itemsForChart.map(it => metric === 'revenue' ? Number(it.revenue||0) : Number(it.qty||0));
             const dsLabel = metric === 'revenue' ? 'Revenue (₱)' : 'Quantity';
             if (!popularChart) {
               popularChart = new Chart(popularChartCanvas, {
@@ -1079,9 +1110,9 @@ document.addEventListener('DOMContentLoaded', function(){
                   borderWidth: 1
                 }] },
                 options: {
-                  plugins: { legend: { display: false } },
                   responsive: true,
                   maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
                   scales: {
                     y: {
                       beginAtZero: true,
@@ -1106,6 +1137,10 @@ document.addEventListener('DOMContentLoaded', function(){
               popularChart.data.datasets[0].label = dsLabel;
               popularChart.data.datasets[0].backgroundColor = metric === 'revenue' ? 'rgba(25,135,84,0.5)' : 'rgba(13,110,253,0.5)';
               popularChart.data.datasets[0].borderColor = metric === 'revenue' ? '#198754' : '#0d6efd';
+              // Update y-axis tick formatter based on current metric
+              if (popularChart.options && popularChart.options.scales && popularChart.options.scales.y && popularChart.options.scales.y.ticks) {
+                popularChart.options.scales.y.ticks.callback = (v)=> metric === 'revenue' ? '₱' + Number(v).toLocaleString() : Number(v).toLocaleString();
+              }
               popularChart.update();
             }
           }
