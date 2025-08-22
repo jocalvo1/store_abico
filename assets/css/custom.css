@@ -242,3 +242,47 @@ a.text-reset .stat-card:hover { color: inherit; text-decoration: none; }
     margin-top: 0.5rem;
     border: 1px solid rgba(0,0,0,.05);
 }
+
+/* ===== Responsive heading and header layout adjustments ===== */
+@media (max-width: 767.98px) {
+    /* Make all headings naturally span full width on small screens */
+    h1, h2, h3, h4, h5, h6 {
+        width: 100%;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Stack the header bar (title above controls) */
+    .container-fluid .d-flex.justify-content-between.align-items-center.mb-4 {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    /* Make the controls row wrap nicely and use available width */
+    .container-fluid .d-flex.justify-content-between.align-items-center.mb-4 > .d-flex.align-items-center {
+        width: 100%;
+        flex-wrap: nowrap; /* keep search + button on one row */
+        gap: 0.5rem;
+    }
+
+    /* Let the search form take the row width; button sits below or beside depending on space */
+    .container-fluid .d-flex.justify-content-between.align-items-center.mb-4 > .d-flex.align-items-center form {
+        flex: 1 1 auto; /* grow to fill remaining space, not full width */
+        min-width: 0;   /* allow shrinking on small screens */
+    }
+
+    /* Override any fixed min-width that could force wrapping */
+    form.min-width-300px { min-width: 0 !important; }
+
+    /* Allow the input to shrink within the input group */
+    .container-fluid .d-flex.justify-content-between.align-items-center.mb-4 .input-group .form-control {
+        min-width: 0;
+    }
+
+    /* Prevent the Add button from stretching and keep label on one line */
+    .container-fluid .d-flex.justify-content-between.align-items-center.mb-4 > .d-flex.align-items-center a.btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+}
