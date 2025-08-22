@@ -150,6 +150,139 @@
     border: 1px solid rgba(0,0,0,.05);
 }
 
+/* ===== Outstanding Balances (scoped) ===== */
+.outstanding-balances .table {
+  table-layout: fixed; /* helps truncation */
+}
+.outstanding-balances td.customer-name,
+.outstanding-balances th:first-child {
+  width: 44%;
+}
+.outstanding-balances td.customer-name .name {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.outstanding-balances thead th {
+  vertical-align: middle;
+}
+
+@media (max-width: 575.98px) {
+  .outstanding-balances .card-header {
+    padding: 0.6rem 0.8rem;
+  }
+  .outstanding-balances .table > :not(caption) > * > * {
+    padding: 0.5rem 0.6rem; /* compact rows */
+  }
+  .outstanding-balances td.customer-name .name {
+    font-size: 0.95rem;
+  }
+  .outstanding-balances .table thead th {
+    font-size: 0.8rem;
+  }
+}
+
+/* ===== Inventory Alerts (scoped) ===== */
+.inventory-alerts .card-header .badge {
+  font-weight: 600;
+}
+.inventory-alerts .alerts-scroll {
+  /* enable momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+.inventory-alerts .list-group-item {
+  padding: 0.6rem 0.75rem;
+}
+.inventory-alerts .list-group-item .me-3 {
+  min-width: 0; /* allow truncation */
+  flex: 1 1 auto;
+}
+.inventory-alerts .list-group-item .fw-semibold {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inventory-alerts .list-group-item .small.text-muted {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inventory-alerts .list-group.list-group-flush {
+  margin-bottom: 0.25rem;
+}
+
+@media (max-width: 575.98px) {
+  .inventory-alerts .card-header {
+    padding: 0.6rem 0.8rem;
+  }
+  .inventory-alerts .list-group-item {
+    padding: 0.5rem 0.65rem;
+  }
+  .inventory-alerts .list-group-item .fw-semibold {
+    font-size: 0.95rem;
+  }
+  .inventory-alerts .list-group-item .small.text-muted {
+    font-size: 0.8rem;
+  }
+}
+
+/* ===== Mobile tweaks for Stat Cards ===== */
+@media (max-width: 575.98px) {
+  .stat-card .card-body {
+    padding: 0.85rem 1rem;
+  }
+  .stat-card .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .stat-card .h4 {
+    font-size: 1.15rem;
+  }
+  .stat-card .text-muted.small {
+    font-size: 0.8rem;
+  }
+  /* Ensure content doesn't squish; allow spacing */
+  .stat-card .d-flex {
+    gap: 0.5rem;
+  }
+
+  /* Popular Items: simplify header and controls on mobile */
+  .card-header h5 .fa-fire,
+  .card-header h5 .fa-triangle-exclamation {
+    display: none !important;
+  }
+  label[for="popularMetric"],
+  label[for="popularView"] {
+    display: none !important;
+  }
+  #popularMetric,
+  #popularView {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  /* Reduce chart height for mobile */
+  #popularChart {
+    height: 160px !important;
+  }
+  /* Compact table and hide index column on mobile */
+  #popularTable {
+    font-size: 0.9rem;
+  }
+  #popularTable th,
+  #popularTable td {
+    padding: 0.35rem 0.5rem;
+  }
+  #popularTable th:first-child,
+  #popularTable td:first-child {
+    display: none;
+  }
+  .card-header .flex-wrap {
+    gap: 0.5rem !important;
+  }
+}
+
 /* ===== Dashboard Stat Cards ===== */
 .stat-card {
     border-radius: 0.75rem;
@@ -236,9 +369,4 @@ a.text-reset .stat-card:hover { color: inherit; text-decoration: none; }
 
 .dropdown-item.text-danger:hover i {
     color: #dc3545 !important;
-}
-
-.navbar-nav .dropdown-menu {
-    margin-top: 0.5rem;
-    border: 1px solid rgba(0,0,0,.05);
 }
