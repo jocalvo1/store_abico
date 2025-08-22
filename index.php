@@ -765,7 +765,10 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                         <h5 class="mb-0"><i class="fas fa-triangle-exclamation text-warning me-2"></i>Inventory Alerts
                             <span class="badge bg-warning text-dark ms-2"><?= number_format($alertBadgeCount) ?></span>
                         </h5>
-                        <a href="inventory/products/index.php" class="small text-decoration-none"><i class="fas fa-arrow-up-right-from-square me-1"></i>View all</a>
+                        <a href="inventory/products/index.php" class="small text-decoration-none" aria-label="View all" title="View all">
+                            <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                            <span class="d-none d-sm-inline">View all</span>
+                        </a>
                     </div>
                     <div class="card-body p-0">
                         <?php // lists already computed above: $combined, $outs, $lows ?>
@@ -818,7 +821,10 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                         <h5 class="mb-0">Today's Deliveries</h5>
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-secondary">Pending: <?= number_format($delivCounts['pending_today']) ?></span>
-                            <a href="deliveries/index.php" class="small text-decoration-none"><i class="fas fa-arrow-up-right-from-square me-1"></i>View all</a>
+                            <a href="deliveries/index.php" class="small text-decoration-none" aria-label="View all" title="View all">
+                                <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                                <span class="d-none d-sm-inline">View all</span>
+                            </a>
                         </div>
                     </div>
                     <div class="card-body p-0">
@@ -866,7 +872,10 @@ if ($qOut) { while ($r = $qOut->fetch_assoc()) { $outOfStockItems[] = $r; } }
                 <div class="card border-0 shadow-sm h-100 outstanding-balances">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Customers with Outstanding Balance</h5>
-                        <a href="ledger/customers/index.php" class="small text-decoration-none"><i class="fas fa-arrow-up-right-from-square me-1"></i>View all</a>
+                        <a href="ledger/customers/index.php" class="small text-decoration-none" aria-label="View all" title="View all">
+                            <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                            <span class="d-none d-sm-inline">View all</span>
+                        </a>
                     </div>
                     <div class="card-body p-0">
                         <?php
@@ -947,6 +956,8 @@ document.addEventListener('DOMContentLoaded', function(){
           }]
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             y: { beginAtZero: true, ticks: { callback: (v)=>'₱' + Number(v).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}) } },
@@ -1029,6 +1040,18 @@ document.addEventListener('DOMContentLoaded', function(){
         } catch (err) { console.error(err); }
       }
 
+      // Debounced resize to ensure chart expands when viewport grows
+      function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), ms); }; }
+      const handleResize = debounce(()=>{ try { chart.resize(); } catch(e){} try { if (popularChart) popularChart.resize(); } catch(e){} }, 100);
+      window.addEventListener('resize', handleResize);
+
+      // Observe container size changes as well (e.g., grid column changes)
+      try {
+        const ro = new ResizeObserver(()=>{ try { chart.resize(); } catch(e){} });
+        const parentEl = ctx.parentElement || ctx;
+        if (parentEl) ro.observe(parentEl);
+      } catch(e) { /* ResizeObserver not supported */ }
+
       async function loadPopular() {
         try {
           const range = rangeSel?.value || 'week';
@@ -1050,6 +1073,8 @@ document.addEventListener('DOMContentLoaded', function(){
             const showChart = view === 'chart';
             chartWrap.style.display = showChart ? '' : 'none';
             tableWrap.style.display = showChart ? 'none' : '';
+            // Ensure chart resizes correctly when becoming visible
+            if (showChart && popularChart) { requestAnimationFrame(()=>{ try { popularChart.resize(); } catch(e){} }); }
           }
           if (!tbody) return;
           tbody.innerHTML = '';
@@ -1085,9 +1110,9 @@ document.addEventListener('DOMContentLoaded', function(){
                   borderWidth: 1
                 }] },
                 options: {
-                  plugins: { legend: { display: false } },
                   responsive: true,
                   maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
                   scales: {
                     y: {
                       beginAtZero: true,

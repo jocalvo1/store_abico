@@ -153,8 +153,6 @@ function isActive($paths, $class = 'active') {
                         <i class="fas fa-cog"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-user-shield me-2"></i>Profile</a></li>
-                        <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="dropdown-item text-danger logout-item" href="<?= url('includes/logout.php'); ?>">
                                 <i class="fas fa-sign-out-alt me-2"></i>Logout
