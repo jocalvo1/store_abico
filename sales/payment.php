@@ -155,7 +155,7 @@ if ($resPm) {
 require_once __DIR__ . '/../templates/header.php';
 ?>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 pb-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h4 mb-0">Settle Payment</h1>
     <a href="view.php?id=<?php echo (int)$saleId; ?>" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
@@ -192,7 +192,7 @@ require_once __DIR__ . '/../templates/header.php';
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-white py-3"><h6 class="m-0">Record Payment</h6></div>
           <div class="card-body">
-            <form method="post">
+            <form method="post" id="paymentForm" autocomplete="off">
               <input type="hidden" name="sale_id" value="<?php echo (int)$saleId; ?>">
               <div class="mb-3">
                 <label for="payment_method_id" class="form-label">Payment Method <span class="text-danger">*</span></label>
@@ -207,7 +207,7 @@ require_once __DIR__ . '/../templates/header.php';
                 <label for="amount_tendered" class="form-label">Amount Tendered <span class="text-danger">*</span></label>
                 <div class="input-group input-group-lg">
                   <span class="input-group-text">₱</span>
-                  <input type="number" step="0.01" min="0.01" class="form-control" id="amount_tendered" name="amount_tendered" value="<?php echo htmlspecialchars(number_format($remaining, 2, '.', '')); ?>" required>
+                  <input type="number" step="0.01" min="0.01" class="form-control" id="amount_tendered" name="amount_tendered" value="<?php echo htmlspecialchars(number_format($remaining, 2, '.', '')); ?>" inputmode="decimal" pattern="^[0-9]*[.,]?[0-9]*$" required>
                 </div>
                 <div class="form-text">You can enter the exact remaining or a higher amount; any excess will be recorded as change.</div>
               </div>
@@ -225,6 +225,23 @@ require_once __DIR__ . '/../templates/header.php';
       </div>
     </div>
   <?php endif; ?>
+  <!-- Back to Top Button -->
+  <button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+      <i class="fas fa-arrow-up"></i>
+      <span class="visually-hidden">Back to top</span>
+  </button>
+  <!-- Mobile sticky action bar -->
+  <div class="d-lg-none fixed-bottom bg-white border-top shadow-sm">
+    <div class="container-fluid py-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="small text-muted">Remaining</div>
+          <div class="fw-bold text-danger">₱<?php echo number_format($remaining ?? 0.0, 2); ?></div>
+        </div>
+        <button type="submit" class="btn btn-success" form="paymentForm"><i class="fas fa-check me-1"></i> Apply</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <?php 

@@ -108,15 +108,13 @@ if ($stmtPays) {
 }
 ?>
 
-<div class="container-fluid py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h4 mb-0">Sale #<?php echo str_pad($sale['id'], 6, '0', STR_PAD_LEFT); ?></h1>
-      <div class="text-muted small">Date: <?php echo date('M d, Y h:i A', strtotime($sale['transaction_date'])); ?></div>
-    </div>
-    <div class="d-flex gap-2">
+<div class="container-fluid py-4 pb-5">
+  <div class="mb-4 text-center">
+    <h1 class="h4 mb-1">Sale #<?php echo str_pad($sale['id'], 6, '0', STR_PAD_LEFT); ?></h1>
+    <div class="text-muted small">Date: <?php echo date('M d, Y h:i A', strtotime($sale['transaction_date'])); ?></div>
+    <div class="d-flex justify-content-center gap-2 mt-3">
       <a href="index.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
-      <a href="receipt.php?id=<?php echo (int)$sale['id']; ?>&print=1" target="_blank" class="btn btn-primary btn-sm"><i class="fas fa-receipt me-1"></i> Print Receipt</a>
+      <a href="receipt.php?id=<?php echo (int)$sale['id']; ?>&print=1" class="btn btn-primary btn-sm"><i class="fas fa-receipt me-1"></i> Print Receipt</a>
     </div>
   </div>
 
@@ -128,14 +126,19 @@ if ($stmtPays) {
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
+            <style>
+              /* Truncate long item names with tooltip */
+              .item-name { max-width: 260px; }
+              @media (max-width: 767.98px) { .item-name { max-width: 65vw; } }
+            </style>
             <table class="table table-striped align-middle mb-0">
               <thead class="bg-light">
                 <tr>
                   <th class="ps-3">Item</th>
-                  <th class="text-center">Unit</th>
+                  <th class="text-center d-none d-md-table-cell">Unit</th>
                   <th class="text-end">Qty</th>
-                  <th class="text-end">Unit Price</th>
-                  <th class="text-end pe-3">Line Total</th>
+                  <th class="text-end d-none d-md-table-cell">Unit Price</th>
+                  <th class="text-end pe-3 d-none d-md-table-cell">Line Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,11 +147,21 @@ if ($stmtPays) {
                 <?php else: ?>
                 <?php foreach ($items as $row): ?>
                 <tr>
-                  <td class="ps-3"><?php echo htmlspecialchars($row['name'] ?? ('#' . (int)$row['item_id'])); ?></td>
-                  <td class="text-center"><?php echo htmlspecialchars($row['unit'] ?? ''); ?></td>
+                  <td class="ps-3">
+                    <?php $safeItemName = htmlspecialchars($row['name'] ?? ('#' . (int)$row['item_id'])); ?>
+                    <span class="d-inline-block text-truncate item-name" title="<?php echo $safeItemName; ?>" data-bs-toggle="tooltip" data-bs-placement="top">
+                      <?php echo $safeItemName; ?>
+                    </span>
+                    <div class="d-md-none small text-muted mt-1">
+                      <div>Unit: <span class="fw-medium"><?php echo htmlspecialchars($row['unit'] ?? ''); ?></span></div>
+                      <div>Unit Price: <span class="fw-medium">₱<?php echo number_format((float)$row['unit_price'], 2); ?></span></div>
+                      <div>Line Total: <span class="fw-medium">₱<?php echo number_format((float)$row['line_total'], 2); ?></span></div>
+                    </div>
+                  </td>
+                  <td class="text-center d-none d-md-table-cell"><?php echo htmlspecialchars($row['unit'] ?? ''); ?></td>
                   <td class="text-end"><?php echo number_format((float)$row['quantity'], 0); ?></td>
-                  <td class="text-end">₱<?php echo number_format((float)$row['unit_price'], 2); ?></td>
-                  <td class="text-end pe-3">₱<?php echo number_format((float)$row['line_total'], 2); ?></td>
+                  <td class="text-end d-none d-md-table-cell">₱<?php echo number_format((float)$row['unit_price'], 2); ?></td>
+                  <td class="text-end pe-3 d-none d-md-table-cell">₱<?php echo number_format((float)$row['line_total'], 2); ?></td>
                 </tr>
                 <?php endforeach; ?>
                 <?php endif; ?>
@@ -156,10 +169,14 @@ if ($stmtPays) {
               <tfoot>
                 <tr>
                   <th colspan="4" class="text-end">Total</th>
-                  <th class="text-end pe-3">₱<?php echo number_format((float)$sale['total_amount'], 2); ?></th>
+                  <th class="text-end pe-3 d-none d-md-table-cell">₱<?php echo number_format((float)$sale['total_amount'], 2); ?></th>
                 </tr>
               </tfoot>
             </table>
+            <div class="d-md-none px-3 py-2 border-top bg-light d-flex justify-content-between">
+              <span class="fw-medium">Total</span>
+              <span class="fw-bold">₱<?php echo number_format((float)$sale['total_amount'], 2); ?></span>
+            </div>
           </div>
         </div>
       </div>
@@ -212,7 +229,7 @@ if ($stmtPays) {
             <span><span class="badge bg-<?php echo ($debt['status']==='paid'?'success':($debt['status']==='partial'?'warning':'danger')); ?>"><?php echo ucfirst($debt['status']); ?></span></span>
           </div>
           <?php if ($remainingBalance > 0): ?>
-          <div class="d-grid mt-3">
+          <div class="d-grid mt-3 d-none d-lg-grid">
             <a href="payment.php?sale_id=<?php echo (int)$sale['id']; ?>" class="btn btn-success btn-sm">
               <i class="fas fa-credit-card me-1"></i> Pay Now
             </a>
@@ -237,12 +254,7 @@ if ($stmtPays) {
 
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <h6 class="m-0">Payment History</h6>
-            <?php if ($remainingBalance > 0): ?>
-            <a href="payment.php?sale_id=<?php echo (int)$sale['id']; ?>" class="btn btn-outline-success btn-sm"><i class="fas fa-wallet me-1"></i> Settle Balance</a>
-            <?php endif; ?>
-          </div>
+          <h6 class="m-0">Payment History</h6>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -256,8 +268,8 @@ if ($stmtPays) {
                   <th class="ps-3">Date</th>
                   <th>Method</th>
                   <th class="text-end mono">Amount</th>
-                  <th class="text-end mono">Tendered</th>
-                  <th class="text-end mono pe-3">Change</th>
+                  <th class="text-end mono d-none d-md-table-cell">Tendered</th>
+                  <th class="text-end mono pe-3 d-none d-md-table-cell">Change</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,8 +281,8 @@ if ($stmtPays) {
                   <td class="ps-3"><span class="text-muted small"><i class="far fa-clock me-1"></i><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($p['payment_date']))); ?></span></td>
                   <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle"><?php echo htmlspecialchars($p['method_name'] ?? ''); ?></span></td>
                   <td class="text-end mono">₱<?php echo number_format((float)$p['amount'], 2); ?></td>
-                  <td class="text-end mono">₱<?php echo number_format((float)$p['amount_tendered'], 2); ?></td>
-                  <td class="text-end mono pe-3">₱<?php echo number_format((float)$p['change_amount'], 2); ?></td>
+                  <td class="text-end mono d-none d-md-table-cell">₱<?php echo number_format((float)$p['amount_tendered'], 2); ?></td>
+                  <td class="text-end mono pe-3 d-none d-md-table-cell">₱<?php echo number_format((float)$p['change_amount'], 2); ?></td>
                 </tr>
                 <?php if (!empty($p['notes'])): ?>
                 <tr class="bg-light-subtle">
@@ -288,7 +300,37 @@ if ($stmtPays) {
       </div>
     </div>
   </div>
+  <!-- Mobile sticky action bar: actions without duplicating on-page buttons -->
+  <div class="d-lg-none fixed-bottom bg-white border-top shadow-sm">
+    <div class="container-fluid py-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <a href="index.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+        <div class="d-flex align-items-center gap-2">
+          <a href="receipt.php?id=<?php echo (int)$sale['id']; ?>&print=1" class="btn btn-primary"><i class="fas fa-print me-1"></i> Print</a>
+          <?php if ($remainingBalance > 0): ?>
+            <span class="small me-1"><span class="text-muted">Remaining:</span> <strong class="text-danger">₱<?php echo number_format($remainingBalance, 2); ?></strong></span>
+            <a href="payment.php?sale_id=<?php echo (int)$sale['id']; ?>" class="btn btn-success"><i class="fas fa-credit-card me-1"></i> Pay</a>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.bootstrap) {
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        try { new bootstrap.Tooltip(el); } catch (e) {}
+      });
+    }
+  });
+  </script>
 
 <?php require_once __DIR__ . '/../templates/footer.php';
 

@@ -136,6 +136,8 @@ $now = date('M d, Y h:i A');
     }
     .btnbar { width: var(--w); margin: 8px auto 0; display: flex; gap: 8px; }
     .btnbar button { flex: 1; padding: 8px 10px; font-size: 12px; cursor: pointer; }
+    /* Truncate long item names on-screen; print will still show ellipsis */
+    .ellipsis { display: inline-block; max-width: 38mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
   </style>
 </head>
 <body>
@@ -174,7 +176,10 @@ $now = date('M d, Y h:i A');
         <?php else: ?>
         <?php foreach ($items as $it): ?>
         <tr>
-          <td><?php echo htmlspecialchars($it['name'] ?? 'Item'); ?></td>
+          <td>
+            <?php $nm = htmlspecialchars($it['name'] ?? 'Item'); ?>
+            <span class="ellipsis" title="<?php echo $nm; ?>"><?php echo $nm; ?></span>
+          </td>
           <td class="right mono"><?php echo number_format((float)$it['quantity'], 0); ?><?php echo $it['unit'] ? ' ' . htmlspecialchars($it['unit']) : ''; ?></td>
           <td class="right mono">₱<?php echo number_format((float)$it['unit_price'], 2); ?></td>
           <td class="right mono">₱<?php echo number_format((float)$it['line_total'], 2); ?></td>
@@ -233,7 +238,7 @@ $now = date('M d, Y h:i A');
 
   <div class="btnbar no-print">
     <button onclick="window.print()">Print</button>
-    <button onclick="window.close()">Close</button>
+    <button onclick="history.back()">Back</button>
   </div>
 
   <?php if (isset($_GET['print']) && $_GET['print'] === '1'): ?>
