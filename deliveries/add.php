@@ -221,13 +221,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $conn->close();
 ?>
 
+<style>
+/* Mobile stacked layout for delivery items table */
+@media (max-width: 576px) {
+  #itemsTable thead,
+  #itemsTable tfoot { display: none; }
+
+  #itemsTable,
+  #itemsTable tbody,
+  #itemsTable tr,
+  #itemsTable td { display: block; width: 100%; }
+
+  #itemsTable tr { border-bottom: 1px solid #e9ecef; padding: .75rem .75rem .25rem; }
+
+  #itemsTable td { 
+    border: 0 !important; 
+    padding: .25rem 0 !important; 
+  }
+
+  #itemsTable td[data-label] { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    gap: .5rem; 
+  }
+
+  #itemsTable td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6c757d;
+  }
+
+  /* Ensure the first cell (Item) shows as a block with name then details */
+  #itemsTable td[data-label="Item"] { display: block; }
+  #itemsTable td[data-label="Item"]::before { content: none; }
+
+  /* Keep input group on one line if present */
+  #itemsTable .input-group { flex-wrap: nowrap; }
+}
+</style>
+
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3 mb-0">Create New Delivery</h1>
-                <a href="index.php" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Deliveries
+                <a href="index.php" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 text-nowrap">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Deliveries</span>
                 </a>
             </div>
             
@@ -346,7 +387,7 @@ $conn->close();
                                                         $total += $line_total;
                                                     ?>
                                                         <tr>
-                                                            <td>
+                                                            <td data-label="Item">
                                                                 <div class="fw-semibold"><?php echo htmlspecialchars($item['item_name']); ?></div>
                                                                 <?php if (!empty($item['item_description'])): ?>
                                                                     <div class="text-muted small"><?php echo htmlspecialchars($item['item_description']); ?></div>
@@ -354,16 +395,16 @@ $conn->close();
                                                                 <div class="text-muted small"><?php echo htmlspecialchars($item['unit']); ?></div>
                                                                 <input type="hidden" name="item_ids[]" value="<?php echo $item['id']; ?>">
                                                             </td>
-                                                            <td class="align-middle">
+                                                            <td class="align-middle" data-label="Ordered">
                                                                 <?php echo number_format($item['ordered_quantity']); ?>
                                                             </td>
-                                                            <td class="align-middle">
+                                                            <td class="align-middle" data-label="Delivered">
                                                                 <?php echo number_format($item['delivered_quantity']); ?>
                                                             </td>
-                                                            <td class="align-middle">
+                                                            <td class="align-middle" data-label="Remaining">
                                                                 <?php echo number_format($item['remaining_quantity']); ?>
                                                             </td>
-                                                            <td class="align-middle">
+                                                            <td class="align-middle" data-label="Quantity to Deliver">
                                                                 <input type="number" 
                                                                        class="form-control form-control-sm quantity-input" 
                                                                        name="item_quantities[<?php echo $item['id']; ?>]" 
@@ -373,10 +414,10 @@ $conn->close();
                                                                        step="0.01"
                                                                        data-unit-price="<?php echo $item['unit_price']; ?>">
                                                             </td>
-                                                            <td class="align-middle">
+                                                            <td class="align-middle" data-label="Unit Price">
                                                                 ₱<?php echo number_format($item['unit_price'], 2); ?>
                                                             </td>
-                                                            <td class="align-middle text-end line-total">
+                                                            <td class="align-middle text-end line-total" data-label="Line Total">
                                                                 ₱<span class="line-total-amount"><?php echo number_format($line_total, 2); ?></span>
                                                             </td>
                                                         </tr>
@@ -394,9 +435,10 @@ $conn->close();
                                 </div>
                             </div>
                             
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
-                                <a href="add.php" class="btn btn-outline-secondary me-md-2">
-                                    <i class="fas fa-arrow-left"></i> Back
+                            <div class="d-flex w-100 justify-content-center justify-content-md-end flex-wrap gap-2 mb-4">
+                                <a href="add.php" class="btn btn-outline-secondary me-md-2 d-inline-flex align-items-center gap-1 text-nowrap">
+                                    <i class="fas fa-arrow-left"></i>
+                                    <span>Back</span>
                                 </a>
                                 <?php if (!empty($po_items)): ?>
                                     <button type="submit" name="save_delivery" class="btn btn-primary">

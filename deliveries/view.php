@@ -60,28 +60,39 @@ if ($delivery_id <= 0) {
 }
 ?>
 
+<style>
+@media (max-width: 576px) {
+  /* Stackable tables for mobile */
+  .stack-table thead, .stack-table tfoot { display: none; }
+  .stack-table tbody tr { display: block; border-top: 1px solid #e9ecef; }
+  .stack-table tbody tr + tr { margin-top: .5rem; }
+  .stack-table tbody td { display: grid; grid-template-columns: 1fr 2fr; gap: .5rem; padding: .5rem .75rem; }
+  .stack-table tbody td::before { content: attr(data-label); font-weight: 600; color: #6c757d; }
+  .stack-table tbody td.text-end { text-align: left !important; }
+  /* Header actions centered on mobile */
+  .header-actions { gap: .5rem; }
+  /* Key-value rows for info cards */
+  .kv-row { display: grid; grid-template-columns: 1fr 2fr; gap: .5rem; padding: .375rem 0; border-top: 1px dashed #e9ecef; }
+  .kv-row:first-of-type { border-top: 0; }
+  .kv-row::before { content: attr(data-label); font-weight: 600; color: #6c757d; }
+}
+/* Desktop/tablet slight spacing for kv rows */
+@media (min-width: 577px) {
+  .kv-row { display: flex; align-items: center; gap: .5rem; padding: .125rem 0; }
+  .kv-row::before { content: attr(data-label) ':'; font-weight: 600; color: #495057; margin-right: .25rem; }
+}
+</style>
+
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row align-items-center justify-content-center justify-content-md-between mb-4">
         <div>
-            <h1 class="h3 mb-0">Delivery #<?php echo $delivery_id; ?></h1>
-            <div class="d-flex align-items-center mt-2">
-                <?php 
-                    $status_badge = $delivery['status'] === 'delivered' ? 'success' : 
-                        ($delivery['status'] === 'pending' ? 'warning' : 'secondary'); 
-                ?>
-                <span class="badge bg-<?php echo $status_badge; ?> me-2"><?php echo ucfirst($delivery['status']); ?></span>
-                <?php if ($delivery['status'] === 'cancelled' && !empty($delivery['cancelled_at'])): ?>
-                    <span class="text-muted small">
-                        Cancelled on <?php echo date('M d, Y \a\t h:i A', strtotime($delivery['cancelled_at'])); ?>
-                    </span>
-                <?php endif; ?>
-            </div>
+            <h1 class="h3 mb-3">Delivery #<?php echo $delivery_id; ?></h1>
         </div>
-        <div class="btn-group">
-            <a href="index.php" class="btn btn-sm btn-outline-secondary">
+        <div class="header-actions d-flex flex-wrap justify-content-center justify-content-md-end">
+            <a href="index.php" class="btn btn-sm btn-outline-secondary me-md-2">
                 <i class="fas fa-arrow-left"></i> Back to Deliveries
             </a>
-            <a href="print.php?id=<?php echo $delivery_id; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+            <a href="print.php?id=<?php echo $delivery_id; ?>" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-print"></i> Print
             </a>
         </div>
@@ -102,30 +113,30 @@ if ($delivery_id <= 0) {
             </div>
             <div class="card-body">
                 <div class="row mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-4 mb-3 mb-md-0">
                         <h6>Purchase Order</h6>
-                        <p class="mb-1"><strong>PO Number:</strong> <?php echo htmlspecialchars($purchase_order['po_number']); ?></p>
-                        <p class="mb-1"><strong>Supplier:</strong> <?php echo htmlspecialchars($purchase_order['supplier_name']); ?></p>
-                        <p class="mb-0"><strong>Order Date:</strong> <?php echo date('M d, Y', strtotime($purchase_order['order_date'])); ?></p>
+                        <div class="kv-row" data-label="PO Number"><?php echo htmlspecialchars($purchase_order['po_number']); ?></div>
+                        <div class="kv-row" data-label="Supplier"><?php echo htmlspecialchars($purchase_order['supplier_name']); ?></div>
+                        <div class="kv-row" data-label="Order Date"><?php echo date('M d, Y', strtotime($purchase_order['order_date'])); ?></div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4 mb-3 mb-md-0">
                         <h6>Delivery Details</h6>
-                        <p class="mb-1"><strong>Delivery Date:</strong> <?php echo date('M d, Y', strtotime($delivery['delivery_date'])); ?></p>
-                        <p class="mb-1"><strong>Status:</strong> 
+                        <div class="kv-row" data-label="Delivery Date"><?php echo date('M d, Y', strtotime($delivery['delivery_date'])); ?></div>
+                        <div class="kv-row" data-label="Status">
                             <span class="badge bg-<?php 
                                 echo $delivery['status'] === 'delivered' ? 'success' : 
                                     ($delivery['status'] === 'pending' ? 'warning' : 'secondary'); 
                             ?>">
                                 <?php echo ucfirst($delivery['status']); ?>
                             </span>
-                        </p>
-                        <p class="mb-1"><strong>Delivered By:</strong> <?php echo htmlspecialchars($delivery['delivered_by'] ?? '—'); ?></p>
-                        <p class="mb-0"><strong>Received By:</strong> <?php echo htmlspecialchars($delivery['received_by'] ?? '—'); ?></p>
+                        </div>
+                        <div class="kv-row" data-label="Delivered By"><?php echo htmlspecialchars($delivery['delivered_by'] ?? '—'); ?></div>
+                        <div class="kv-row" data-label="Received By"><?php echo htmlspecialchars($delivery['received_by'] ?? '—'); ?></div>
                     </div>
                     <div class="col-md-4">
                         <h6>Totals</h6>
-                        <p class="mb-1"><strong>Items:</strong> <?php echo count($delivery_items); ?></p>
-                        <p class="mb-0"><strong>Total Amount:</strong> ₱<?php echo number_format($total, 2); ?></p>
+                        <div class="kv-row" data-label="Items"><?php echo count($delivery_items); ?></div>
+                        <div class="kv-row" data-label="Total Amount">₱<?php echo number_format($total, 2); ?></div>
                     </div>
                 </div>
 
@@ -140,7 +151,7 @@ if ($delivery_id <= 0) {
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
-                                <table class="table table-hover mb-0">
+                                <table class="table table-hover mb-0 stack-table">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Item</th>
@@ -153,19 +164,19 @@ if ($delivery_id <= 0) {
                                     <tbody>
                                         <?php foreach ($delivery_items as $item): ?>
                                             <tr>
-                                                <td>
+                                                <td data-label="Item">
                                                     <div class="fw-semibold"><?php echo htmlspecialchars($item['item_name']); ?></div>
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Quantity">
                                                     <?php echo number_format($item['quantity']); ?>
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Unit">
                                                     <?php echo htmlspecialchars($item['unit']); ?>
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Unit Price">
                                                     ₱<?php echo number_format($item['unit_price'], 2); ?>
                                                 </td>
-                                                <td class="align-middle text-end">
+                                                <td class="align-middle text-end" data-label="Total">
                                                     ₱<?php echo number_format($item['line_total'], 2); ?>
                                                 </td>
                                             </tr>
@@ -211,7 +222,7 @@ if ($delivery_id <= 0) {
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex flex-column flex-md-row align-items-center justify-content-center justify-content-md-between">
                     <div>
                         <p class="text-muted small mb-0">
                             Created on <?php echo date('M d, Y \a\t h:i A', strtotime($delivery['created_at'])); ?>
@@ -220,18 +231,15 @@ if ($delivery_id <= 0) {
                             <?php endif; ?>
                         </p>
                     </div>
-                    <div class="btn-group">
+                    <div class="header-actions d-flex flex-wrap justify-content-center justify-content-md-end mt-3 mt-md-0">
                         <?php if ($delivery['status'] === 'pending'): ?>
-                            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#confirmDeliveryModal">
+                            <button type="button" class="btn btn-outline-success me-md-2" data-bs-toggle="modal" data-bs-target="#confirmDeliveryModal">
                                 <i class="fas fa-check"></i> Confirm Delivery
                             </button>
                             <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelDeliveryModal">
-                                <i class="fas fa-times"></i> Cancel
+                                <i class="fas fa-times"></i> Cancel Delivery
                             </button>
                         <?php endif; ?>
-                        <a href="print.php?id=<?php echo $delivery_id; ?>&print=1" target="_blank" class="btn btn-outline-secondary">
-                            <i class="fas fa-print"></i> Print
-                        </a>
                     </div>
                 </div>
             </div>
@@ -392,9 +400,12 @@ if ($delivery_id <= 0) {
         
         <?php endif; ?>
 <!-- Notes shown inline; modal removed per UX preference -->
-
 </div>
-
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <?php 
 // Include footer
 require_once __DIR__ . '/../templates/footer.php'; 
