@@ -41,9 +41,7 @@ $rowNumber = 1;
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
-        <div class="row">
-            <h1 class="h3 mb-0 mt-2">Suppliers</h1>
-        </div>
+        <h1 class="h3 mb-0 mt-2">Suppliers</h1>
         <div class="d-flex align-items-center">
             <form action="" method="get" class="me-3 min-width-300px">
                 <div class="input-group input-group-sm">
@@ -63,7 +61,11 @@ $rowNumber = 1;
                     <?php endif; ?>
                 </div>
             </form>
-            <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
+            <?php $qs = http_build_query(['search' => $searchTerm]); ?>
+            <a href="export.php?<?php echo $qs; ?>" class="btn btn-success btn-sm me-2">
+                <i class="fas fa-file-csv me-1"></i> Export CSV
+            </a>
+            <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center me-2">
                 <i class="fas fa-plus me-1"></i> Add New
             </a>
         </div>
@@ -98,69 +100,106 @@ $rowNumber = 1;
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p d-none d-sm-table-cell">#</th>
                                 <th class="text-uppercase text-muted small fw-bold">Supplier</th>
-                                <th class="text-uppercase text-muted small fw-bold">Contact Person</th>
-                                <th class="text-uppercase text-muted small fw-bold">Phone</th>
-                                <th class="text-uppercase text-muted small fw-bold">Email</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end">Purchase Orders</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Contact Person</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Phone</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Email</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end d-none d-md-table-cell">Purchase Orders</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end">Total Purchases</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3 d-none d-md-table-cell">Actions</th>
                             </tr>
                         </thead>
-                    <tbody>
-                        <?php foreach ($suppliersArray as $index => $supplier): ?>
-                            <tr class="border-top" data-aos="fade-up" data-aos-delay="<?php echo ($index % 10) * 50; ?>">
-                                <td class="text-center text-muted"><?php echo $index + 1; ?></td>
-                                <td class="py-3">
-                                    <a href="view.php?id=<?php echo $supplier['id']; ?>" class="text-decoration-none fw-medium">
-                                        <?php echo htmlspecialchars($supplier['name']); ?>
-                                    </a>
-                                </td>
-                                <td class="text-muted">
-                                    <?php echo !empty($supplier['contact_person']) ? htmlspecialchars($supplier['contact_person']) : '<span class="text-muted">N/A</span>'; ?>
-                                </td>
-                                <td class="text-muted">
-                                    <?php echo !empty($supplier['contact_number']) ? htmlspecialchars($supplier['contact_number']) : '<span class="text-muted">N/A</span>'; ?>
-                                </td>
-                                <td class="text-muted">
-                                    <?php if (!empty($supplier['email'])): ?>
-                                        <a href="mailto:<?php echo htmlspecialchars($supplier['email']); ?>" class="text-decoration-none">
-                                            <?php echo htmlspecialchars($supplier['email']); ?>
+                        <tbody>
+                            <?php foreach ($suppliersArray as $index => $supplier): ?>
+                                <tr class="border-top" data-aos="fade-up" data-aos-delay="<?php echo ($index % 10) * 50; ?>">
+                                    <td class="text-center text-muted d-none d-sm-table-cell"><?php echo $index + 1; ?></td>
+                                    <td class="py-3">
+                                        <a href="view.php?id=<?php echo $supplier['id']; ?>" class="text-decoration-none fw-medium d-inline-block text-truncate" style="max-width: 70vw;" title="<?php echo htmlspecialchars($supplier['name']); ?>" data-bs-toggle="tooltip" data-bs-placement="top">
+                                            <?php echo htmlspecialchars($supplier['name']); ?>
                                         </a>
-                                    <?php else: ?>
-                                        <span class="text-muted">N/A</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end fw-medium">
-                                    <?php echo isset($supplier['total_purchase_orders']) ? (int)$supplier['total_purchase_orders'] : 0; ?>
-                                </td>
-                                <td class="text-end fw-medium">
-                                    <?php 
-                                        $total = isset($supplier['total_purchases']) ? (float)$supplier['total_purchases'] : 0;
-                                        echo '₱' . number_format($total, 2);
-                                    ?>
-                                </td>
-                                <td class="text-end pe-3">
-                                    <div class="d-flex gap-1 justify-content-end">
-                                        <a href="view.php?id=<?php echo $supplier['id']; ?>" 
-                                           class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 
-                                           title="View Details" data-bs-toggle="tooltip" data-bs-placement="top">
-                                            <i class="fas fa-eye fa-xs"></i><span>View</span>
-                                        </a>
-                                        <a href="edit.php?id=<?php echo $supplier['id']; ?>" 
-                                           class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" 
-                                           title="Edit Supplier" data-bs-toggle="tooltip" data-bs-placement="top">
-                                            <i class="fas fa-edit fa-xs"></i><span>Edit</span>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                        <!-- Mobile-only details -->
+                                        <div class="d-md-none small text-muted mt-1">
+                                            <div class="d-flex flex-column gap-1">
+                                                <div>
+                                                    <i class="fas fa-user-tie me-1"></i>
+                                                    <span><?php echo !empty($supplier['contact_person']) ? htmlspecialchars($supplier['contact_person']) : 'N/A'; ?></span>
+                                                </div>
+                                                <div>
+                                                    <i class="fas fa-phone me-1"></i>
+                                                    <span><?php echo !empty($supplier['contact_number']) ? htmlspecialchars($supplier['contact_number']) : 'N/A'; ?></span>
+                                                </div>
+                                                <div>
+                                                    <i class="fas fa-envelope me-1"></i>
+                                                    <?php if (!empty($supplier['email'])): ?>
+                                                        <a href="mailto:<?php echo htmlspecialchars($supplier['email']); ?>" class="text-decoration-none"><?php echo htmlspecialchars($supplier['email']); ?></a>
+                                                    <?php else: ?>
+                                                        <span>N/A</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div>
+                                                    <span class="badge rounded-pill bg-light text-dark">
+                                                        <i class="fas fa-file-invoice me-1"></i>
+                                                        <?php echo isset($supplier['total_purchase_orders']) ? (int)$supplier['total_purchase_orders'] : 0; ?> POs
+                                                    </span>
+                                                </div>
+                                                <div class="mt-1 d-flex flex-wrap gap-2">
+                                                    <a href="view.php?id=<?php echo $supplier['id']; ?>" 
+                                                    class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                                        <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                                    </a>
+                                                    <a href="edit.php?id=<?php echo $supplier['id']; ?>" 
+                                                    class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                                                        <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-muted d-none d-md-table-cell">
+                                        <?php echo !empty($supplier['contact_person']) ? htmlspecialchars($supplier['contact_person']) : '<span class="text-muted">N/A</span>'; ?>
+                                    </td>
+                                    <td class="text-muted d-none d-md-table-cell">
+                                        <?php echo !empty($supplier['contact_number']) ? htmlspecialchars($supplier['contact_number']) : '<span class="text-muted">N/A</span>'; ?>
+                                    </td>
+                                    <td class="text-muted d-none d-md-table-cell">
+                                        <?php if (!empty($supplier['email'])): ?>
+                                            <a href="mailto:<?php echo htmlspecialchars($supplier['email']); ?>" class="text-decoration-none">
+                                                <?php echo htmlspecialchars($supplier['email']); ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-muted">N/A</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end fw-medium d-none d-md-table-cell">
+                                        <?php echo isset($supplier['total_purchase_orders']) ? (int)$supplier['total_purchase_orders'] : 0; ?>
+                                    </td>
+                                    <td class="text-end fw-medium">
+                                        <?php 
+                                            $total = isset($supplier['total_purchases']) ? (float)$supplier['total_purchases'] : 0;
+                                            echo '₱' . number_format($total, 2);
+                                        ?>
+                                    </td>
+                                    <td class="text-end pe-3 d-none d-md-table-cell">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <a href="view.php?id=<?php echo $supplier['id']; ?>" 
+                                            class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 
+                                            title="View Details" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                            </a>
+                                            <a href="edit.php?id=<?php echo $supplier['id']; ?>" 
+                                            class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" 
+                                            title="Edit Supplier" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
-        </div>
         </div>
     </div>
 </div>

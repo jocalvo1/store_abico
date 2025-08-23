@@ -88,7 +88,7 @@ require_once __DIR__ . '/../../templates/header.php';
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h4 mb-0">Customer Debts</h1>
+            <h1 class="h3 mb-0 mt-2">Customer Debts</h1>
             <div class="text-muted small"><?php echo count($rows); ?> customers</div>
         </div>
         <div>
@@ -120,6 +120,10 @@ require_once __DIR__ . '/../../templates/header.php';
                     <input type="date" class="form-control" name="to" value="<?php echo htmlspecialchars($dateTo); ?>">
                 </div>
                 <div class="col-12 mt-2">
+                <?php $qs = http_build_query(['search' => $search, 'status' => $status, 'from' => $dateFrom, 'to' => $dateTo]); ?>
+                    <a class="btn btn-success me-2" href="export.php?<?php echo $qs; ?>">
+                        <i class="fas fa-file-csv me-1"></i> Export CSV
+                    </a>
                     <button class="btn btn-primary">Filter</button>
                     <a class="btn btn-outline-secondary" href="index.php">Reset</a>
                 </div>
@@ -133,12 +137,12 @@ require_once __DIR__ . '/../../templates/header.php';
                 <thead class="bg-light">
                     <tr>
                         <th class="ps-3">Customer</th>
-                        <th class="text-center"><?php echo $status==='paid'?'Paid Debts':'Open Debts'; ?></th>
-                        <th class="text-end">Total Amount</th>
-                        <th class="text-end">Total Paid</th>
+                        <th class="text-center d-none d-md-table-cell"><?php echo $status==='paid'?'Paid Debts':'Open Debts'; ?></th>
+                        <th class="text-end d-none d-lg-table-cell">Total Amount</th>
+                        <th class="text-end d-none d-lg-table-cell">Total Paid</th>
                         <th class="text-end"><?php echo $status==='paid'?'Remaining':'Total Remaining'; ?></th>
-                        <th class="text-center">Last Transaction</th>
-                        <th class="text-end">Actions</th>
+                        <th class="text-center d-none d-md-table-cell">Last Transaction</th>
+                        <th class="text-end d-none d-md-table-cell">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,30 +152,68 @@ require_once __DIR__ . '/../../templates/header.php';
                         <tr>
                             <td class="ps-3">
                                 <?php if ((int)$r['customer_id'] > 0): ?>
-                                    <a href="../../ledger/customers/view.php?id=<?php echo (int)$r['customer_id']; ?>" class="text-decoration-none fw-medium">
+                                    <a href="../../ledger/customers/view.php?id=<?php echo (int)$r['customer_id']; ?>" class="text-decoration-none fw-medium d-inline-block text-truncate" style="max-width: 70vw;">
                                         <?php echo htmlspecialchars($r['customer_name']); ?>
                                     </a>
                                 <?php else: ?>
                                     <span class="fw-medium"><?php echo htmlspecialchars($r['customer_name']); ?></span>
                                 <?php endif; ?>
+                                <!-- Mobile-only details -->
+                                <div class="d-md-none small text-muted mt-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-<?php echo ($status==='paid') ? 'success' : 'warning text-dark'; ?>">
+                                            <?php echo (int)$r['open_invoices']; ?>
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            Total ₱<?php echo number_format((float)$r['total_due'], 0); ?>
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            Paid ₱<?php echo number_format((float)$r['total_paid'], 0); ?>
+                                        </span>
+                                    </div>
+                                    <div class="mt-1">
+                                        <i class="far fa-clock me-1"></i>
+                                        <?php echo $r['last_transaction'] ? date('M d, Y h:i A', strtotime($r['last_transaction'])) : '-'; ?>
+                                    </div>
+                                    <div class="mt-2 d-flex flex-wrap gap-2">
+                                        <a href="view.php?customer_id=<?php echo (int)$r['customer_id']; ?>" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                            <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                        </a>
+                                        <?php if ($status === 'outstanding' || $status === 'all'): ?>
+                                            <?php if ((int)$r['open_invoices'] === 1 && (int)$r['any_sale_id'] > 0): ?>
+                                                <a href="../../sales/payment.php?sale_id=<?php echo (int)$r['any_sale_id']; ?>" class="btn btn-success btn-sm d-flex align-items-center gap-1">
+                                                    <i class="fas fa-cash-register fa-xs"></i><span>Settle Payment</span>
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="../../sales/index.php?customer_id=<?php echo (int)$r['customer_id']; ?>&status=partial" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                                    <i class="fas fa-list fa-xs"></i><span>View Sales</span>
+                                                </a>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <a href="../../sales/index.php?customer_id=<?php echo (int)$r['customer_id']; ?>&status=paid" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                                                <i class="fas fa-list-check fa-xs"></i><span>View Paid Sales</span>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="text-center">
+                            <td class="text-center d-none d-md-table-cell">
                                 <span class="badge <?php echo $status==='paid'?'bg-success':'bg-warning text-dark'; ?>"><?php echo (int)$r['open_invoices']; ?></span>
                             </td>
-                            <td class="text-end">₱<?php echo number_format((float)$r['total_due'], 2); ?></td>
-                            <td class="text-end text-muted">₱<?php echo number_format((float)$r['total_paid'], 2); ?></td>
+                            <td class="text-end d-none d-lg-table-cell">₱<?php echo number_format((float)$r['total_due'], 2); ?></td>
+                            <td class="text-end text-muted d-none d-lg-table-cell">₱<?php echo number_format((float)$r['total_paid'], 2); ?></td>
                             <td class="text-end fw-bold <?php echo $status==='paid'?'text-muted':'text-danger'; ?>">₱<?php echo number_format((float)$r['total_remaining'], 2); ?></td>
-                            <td class="text-center small text-muted"><?php echo $r['last_transaction'] ? date('M d, Y h:i A', strtotime($r['last_transaction'])) : '-'; ?></td>
-                            <td class="text-end">
-                                <a href="view.php?customer_id=<?php echo (int)$r['customer_id']; ?>" class="btn btn-sm btn-outline-secondary me-1">View</a>
+                            <td class="text-center small text-muted d-none d-md-table-cell"><?php echo $r['last_transaction'] ? date('M d, Y h:i A', strtotime($r['last_transaction'])) : '-'; ?></td>
+                            <td class="text-end d-none d-md-table-cell">
+                                <a href="view.php?customer_id=<?php echo (int)$r['customer_id']; ?>" class="btn btn-outline-primary btn-sm">View</a>
                                 <?php if ($status === 'outstanding' || $status === 'all'): ?>
                                     <?php if ((int)$r['open_invoices'] === 1 && (int)$r['any_sale_id'] > 0): ?>
-                                        <a href="../../sales/payment.php?sale_id=<?php echo (int)$r['any_sale_id']; ?>" class="btn btn-sm btn-success">Settle Payment</a>
+                                        <a href="../../sales/payment.php?sale_id=<?php echo (int)$r['any_sale_id']; ?>" class="btn btn-success btn-sm">Settle Payment</a>
                                     <?php else: ?>
-                                        <a href="../../sales/index.php?customer_id=<?php echo (int)$r['customer_id']; ?>&status=partial" class="btn btn-sm btn-outline-primary">View Sales</a>
+                                        <a href="../../sales/index.php?customer_id=<?php echo (int)$r['customer_id']; ?>&status=partial" class="btn btn-outline-primary btn-sm">View Sales</a>
                                     <?php endif; ?>
                                 <?php else: ?>
-                                    <a href="../../sales/index.php?customer_id=<?php echo (int)$r['customer_id']; ?>&status=paid" class="btn btn-sm btn-outline-secondary">View Paid Sales</a>
+                                    <a href="../../sales/index.php?customer_id=<?php echo (int)$r['customer_id']; ?>&status=paid" class="btn btn-outline-secondary btn-sm">View Paid Sales</a>
                                 <?php endif; ?>
                             </td>
                         </tr>

@@ -74,7 +74,7 @@ require_once __DIR__ . '/../../templates/header.php';
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h4 mb-0">Check Exchanges</h1>
+            <h1 class="h3 mb-0 mt-2">Check Exchanges</h1>
             <div class="text-muted small"><?php echo count($rows); ?> records</div>
         </div>
         <div>
@@ -107,6 +107,10 @@ require_once __DIR__ . '/../../templates/header.php';
                     <input type="date" class="form-control" name="to" value="<?php echo htmlspecialchars($dateTo); ?>">
                 </div>
                 <div class="col-12 mt-2">
+                    <?php $qs = http_build_query(['search' => $search, 'status' => $status, 'from' => $dateFrom, 'to' => $dateTo]); ?>
+                    <a class="btn btn-success me-2" href="export.php?<?php echo $qs; ?>">
+                        <i class="fas fa-file-csv me-1"></i> Export CSV
+                    </a>
                     <button class="btn btn-primary">Filter</button>
                     <a class="btn btn-outline-secondary" href="index.php">Reset</a>
                 </div>
@@ -119,14 +123,14 @@ require_once __DIR__ . '/../../templates/header.php';
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th class="ps-3">Check Date</th>
+                        <th class="ps-3 d-none d-md-table-cell">Check Date</th>
                         <th>Customer</th>
-                        <th>Check #</th>
-                        <th>Bank</th>
+                        <th class="d-none d-lg-table-cell">Check #</th>
+                        <th class="d-none d-lg-table-cell">Bank</th>
                         <th class="text-end">Amount</th>
-                        <th class="text-center">Status</th>
-                        <th>Notes</th>
-                        <th class="text-center">Received By</th>
+                        <th class="text-center d-none d-md-table-cell">Status</th>
+                        <th class="d-none d-lg-table-cell">Notes</th>
+                        <th class="text-center d-none d-md-table-cell">Received By</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,27 +138,49 @@ require_once __DIR__ . '/../../templates/header.php';
                         <tr><td colspan="8" class="text-center py-4 text-muted">No checks found</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                         <tr>
-                            <td class="ps-3"><?php echo $r['check_date'] ? date('M d, Y', strtotime($r['check_date'])) : '<span class="text-muted">-</span>'; ?></td>
+                            <td class="ps-3 d-none d-md-table-cell"><?php echo $r['check_date'] ? date('M d, Y', strtotime($r['check_date'])) : '<span class="text-muted">-</span>'; ?></td>
                             <td>
-                                <div class="fw-medium"><?php echo htmlspecialchars($r['customer_name'] ?? ('#'.$r['customer_id'])); ?></div>
+                                <div class="fw-medium d-inline-block text-truncate" style="max-width: 70vw;">
+                                    <?php echo htmlspecialchars($r['customer_name'] ?? ('#'.$r['customer_id'])); ?>
+                                </div>
+                                <!-- Mobile-only details -->
+                                <div class="d-md-none small text-muted mt-1">
+                                    <div><i class="far fa-calendar-alt me-1"></i><?php echo $r['check_date'] ? date('M d, Y', strtotime($r['check_date'])) : '-'; ?></div>
+                                    <div class="mt-1"><i class="fas fa-hashtag me-1"></i><span class="font-monospace"><?php echo htmlspecialchars($r['check_number']); ?></span></div>
+                                    <div><i class="fas fa-university me-1"></i><?php echo htmlspecialchars($r['bank_name'] ?? ''); ?></div>
+                                    <div class="mt-1 d-flex align-items-center gap-2">
+                                        <?php 
+                                            $st = $r['status'] ?? 'pending';
+                                            $cls = $st==='cleared' ? 'success' : ($st==='bounced' ? 'danger' : 'warning');
+                                        ?>
+                                        <span class="badge bg-<?php echo $cls; ?> text-uppercase"><?php echo htmlspecialchars($st); ?></span>
+                                        <span class="badge bg-light text-dark">₱<?php echo number_format((float)$r['amount'], 2); ?></span>
+                                    </div>
+                                    <?php $fullNotes = $r['notes'] ?? ''; ?>
+                                    <div class="mt-1">
+                                        <i class="far fa-sticky-note me-1"></i>
+                                        <span class="d-inline-block text-truncate" style="max-width: 70vw;" title="<?php echo htmlspecialchars($fullNotes); ?>"><?php echo htmlspecialchars($fullNotes); ?></span>
+                                    </div>
+                                    <div class="mt-1"><i class="fas fa-user me-1"></i><?php echo htmlspecialchars($r['received_by'] ?? ''); ?></div>
+                                </div>
                             </td>
-                            <td class="font-monospace"><?php echo htmlspecialchars($r['check_number']); ?></td>
-                            <td><?php echo htmlspecialchars($r['bank_name'] ?? ''); ?></td>
+                            <td class="font-monospace d-none d-lg-table-cell"><?php echo htmlspecialchars($r['check_number']); ?></td>
+                            <td class="d-none d-lg-table-cell"><?php echo htmlspecialchars($r['bank_name'] ?? ''); ?></td>
                             <td class="text-end">₱<?php echo number_format((float)$r['amount'], 2); ?></td>
-                            <td class="text-center">
+                            <td class="text-center d-none d-md-table-cell">
                                 <?php 
                                     $st = $r['status'] ?? 'pending';
                                     $cls = $st==='cleared' ? 'success' : ($st==='bounced' ? 'danger' : 'warning');
                                 ?>
                                 <span class="badge bg-<?php echo $cls; ?> text-uppercase"><?php echo htmlspecialchars($st); ?></span>
                             </td>
-                            <td class="small">
+                            <td class="small d-none d-lg-table-cell">
                                 <?php $fullNotes = $r['notes'] ?? ''; ?>
                                 <span class="d-inline-block text-truncate" style="max-width: 420px;" title="<?php echo htmlspecialchars($fullNotes); ?>">
                                     <?php echo htmlspecialchars($fullNotes); ?>
                                 </span>
                             </td>
-                            <td class="text-center small text-muted"><?php echo htmlspecialchars($r['received_by'] ?? ''); ?></td>
+                            <td class="text-center small text-muted d-none d-md-table-cell"><?php echo htmlspecialchars($r['received_by'] ?? ''); ?></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>

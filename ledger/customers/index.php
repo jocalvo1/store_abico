@@ -36,9 +36,7 @@ if (is_object($customers) && method_exists($customers, 'fetch_all')) {
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
-        <div class="row">
-            <h1 class="h3 mb-0 mt-2">Customers</h1>
-        </div>
+        <h1 class="h3 mb-0 mt-2">Customers</h1>
         <div class="d-flex align-items-center">
             <form action="" method="get" class="me-3 min-width-300px">
                 <div class="input-group input-group-sm">
@@ -58,7 +56,11 @@ if (is_object($customers) && method_exists($customers, 'fetch_all')) {
                     <?php endif; ?>
                 </div>
             </form>
-            <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/add.php'; ?>" class="btn btn-primary btn-sm d-flex align-items-center">
+            <?php $qs = http_build_query(['search' => $searchTerm]); ?>
+            <a href="export.php?<?php echo $qs; ?>" class="btn btn-success btn-sm me-2">
+                <i class="fas fa-file-csv me-1"></i> Export CSV
+            </a>
+            <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/add.php'; ?>" class="btn btn-primary btn-sm d-flex align-items-center me-2">
                 <i class="fas fa-plus me-1"></i> Add New
             </a>
         </div>
@@ -93,29 +95,52 @@ if (is_object($customers) && method_exists($customers, 'fetch_all')) {
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p d-none d-sm-table-cell">#</th>
                                 <th class="text-uppercase text-muted small fw-bold">Customer Name</th>
-                                <th class="text-uppercase text-muted small fw-bold">Contact</th>
-                                <th class="text-uppercase text-muted small fw-bold">Address</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Contact</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Address</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3 d-none d-md-table-cell">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($customersArray as $index => $customer): ?>
                                 <tr class="border-top" data-aos="fade-up" data-aos-delay="<?php echo ($index % 10) * 50; ?>">
-                                    <td class="text-center text-muted"><?php echo $index + 1; ?></td>
+                                    <td class="text-center text-muted d-none d-sm-table-cell"><?php echo $index + 1; ?></td>
                                     <td class="py-3">
-                                        <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/view.php?id=' . $customer['id']; ?>" class="text-decoration-none fw-medium">
+                                        <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/view.php?id=' . $customer['id']; ?>" class="text-decoration-none fw-medium d-inline-block text-truncate" style="max-width: 70vw;" title="<?php echo htmlspecialchars($customer['name']); ?>" data-bs-toggle="tooltip" data-bs-placement="top">
                                             <?php echo htmlspecialchars($customer['name']); ?>
                                         </a>
+                                        <!-- Mobile-only details -->
+                                        <div class="d-md-none small text-muted mt-1">
+                                            <div class="d-flex flex-column gap-1">
+                                                <div>
+                                                    <i class="fas fa-phone me-1"></i>
+                                                    <span><?php echo !empty($customer['contact']) ? htmlspecialchars($customer['contact']) : 'N/A'; ?></span>
+                                                </div>
+                                                <div>
+                                                    <i class="fas fa-location-dot me-1"></i>
+                                                    <span class="text-wrap"><?php echo !empty($customer['address']) ? htmlspecialchars($customer['address']) : 'N/A'; ?></span>
+                                                </div>
+                                                <div class="mt-1 d-flex flex-wrap gap-2">
+                                                    <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/view.php?id=' . $customer['id']; ?>" 
+                                                       class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                                        <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                                    </a>
+                                                    <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/edit.php?id=' . $customer['id']; ?>" 
+                                                       class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                                                        <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="text-muted">
+                                    <td class="text-muted d-none d-md-table-cell">
                                         <?php echo !empty($customer['contact']) ? htmlspecialchars($customer['contact']) : '<span class="text-muted">N/A</span>'; ?>
                                     </td>
-                                    <td class="text-muted">
+                                    <td class="text-muted d-none d-md-table-cell">
                                         <?php echo !empty($customer['address']) ? htmlspecialchars($customer['address']) : '<span class="text-muted">N/A</span>'; ?>
                                     </td>
-                                    <td class="text-end pe-3">
+                                    <td class="text-end pe-3 d-none d-md-table-cell">
                                         <div class="d-flex gap-1 justify-content-end">
                                             <a href="<?php echo dirname($_SERVER['PHP_SELF']) . '/view.php?id=' . $customer['id']; ?>" 
                                                class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 

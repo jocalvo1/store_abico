@@ -44,9 +44,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
-        <div class="row">
-            <h1 class="h3 mb-0 mt-2">Products</h1>
-        </div>
+        <h1 class="h3 mb-0 mt-2">Products</h1>
         <div class="d-flex align-items-center">
             <form action="" method="get" class="me-3 min-width-300px">
                 <div class="input-group input-group-sm">
@@ -66,6 +64,11 @@ unset($_SESSION['success'], $_SESSION['error']);
                     <?php endif; ?>
                 </div>
             </form>
+            <a href="export.php<?php echo $searchTerm !== '' ? ('?search=' . urlencode($searchTerm)) : ''; ?>"
+               class="btn btn-success btn-sm me-2 d-flex align-items-center" title="Export to CSV" aria-label="Export to CSV">
+                <i class="fas fa-file-excel me-1"></i>
+                <span>Export CSV</span>
+            </a>
             <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
                 <i class="fas fa-plus me-1"></i> Add New
             </a>
@@ -101,14 +104,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p d-none d-sm-table-cell">#</th>
                                 <th class="text-uppercase text-muted small fw-bold">Name</th>
-                                <th class="text-uppercase text-muted small fw-bold">Description</th>
-                                <th class="text-uppercase text-muted small fw-bold">Category</th>
-                                <th class="text-uppercase text-muted small fw-bold">Unit</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end">Stock</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Description</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Category</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Unit</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end d-none d-md-table-cell">Stock</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end">Price</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3 d-none d-md-table-cell">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -126,12 +129,49 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 }
                             ?>
                                 <tr>
-                                    <td class="text-center text-muted"><?php echo $rowNumber++; ?></td>
+                                    <td class="text-center text-muted d-none d-sm-table-cell"><?php echo $rowNumber++; ?></td>
                                     <td>
-                                        <div class="fw-bold"><?php echo htmlspecialchars($product['name']); ?></div>
+                                        <div class="fw-bold text-truncate" style="max-width: 70vw;" title="<?php echo htmlspecialchars($product['name']); ?>" data-bs-toggle="tooltip" data-bs-placement="top"><?php echo htmlspecialchars($product['name']); ?></div>
+                                        <!-- Mobile-only details -->
+                                        <div class="d-md-none small text-muted mt-1">
+                                            <div class="d-flex flex-column gap-1">
+                                                <div>
+                                                    <span class="badge bg-light text-dark"><?php echo htmlspecialchars($product['category']); ?></span>
+                                                </div>
+                                                <div>
+                                                    <i class="fas fa-ruler-vertical me-1"></i>
+                                                    <span><?php echo htmlspecialchars($product['unit']); ?></span>
+                                                </div>
+                                                <div class="text-wrap">
+                                                    <?php 
+                                                    $description = $product['description'];
+                                                    echo strlen($description) > 80 ? 
+                                                        htmlspecialchars(substr($description, 0, 80)) . '...' : 
+                                                        htmlspecialchars($description);
+                                                    ?>
+                                                </div>
+                                                <div>
+                                                    <span class="fw-bold <?php echo $stockClass; ?>"><?php echo number_format($stock, 0); ?></span>
+                                                    <span class="text-muted">in stock</span>
+                                                    <?php if ($stock <= $reorderLevel && $reorderLevel > 0): ?>
+                                                        <span class="ms-1 text-muted">• Reorder at: <?php echo $reorderLevel; ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="mt-1 d-flex flex-wrap gap-2">
+                                                    <a href="view.php?id=<?php echo $product['id']; ?>" 
+                                                       class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                                        <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                                    </a>
+                                                    <a href="edit.php?id=<?php echo $product['id']; ?>" 
+                                                       class="btn btn-outline-success btn-sm d-flex align-items-center gap-1">
+                                                        <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
-                                    <td class="text-muted">
+                                    <td class="text-muted d-none d-md-table-cell">
                                         <?php 
                                         $description = $product['description'];
                                         echo strlen($description) > 50 ? 
@@ -139,13 +179,13 @@ unset($_SESSION['success'], $_SESSION['error']);
                                             htmlspecialchars($description);
                                         ?>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         <span class="badge bg-light text-dark">
                                             <?php echo htmlspecialchars($product['category']); ?>
                                         </span>
                                     </td>
-                                    <td class="text-center text-muted"><?php echo htmlspecialchars($product['unit']); ?></td>
-                                    <td class="text-end">
+                                    <td class="text-center text-muted d-none d-md-table-cell"><?php echo htmlspecialchars($product['unit']); ?></td>
+                                    <td class="text-end d-none d-md-table-cell">
                                         <span class="fw-bold <?php echo $stockClass; ?>">
                                             <?php echo number_format($stock, 0); ?>
                                         </span>
@@ -158,7 +198,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                     <td class="text-end fw-bold">
                                         ₱<?php echo number_format($product['selling_price'], 2); ?>
                                     </td>
-                                    <td class="text-end pe-3">
+                                    <td class="text-end pe-3 d-none d-md-table-cell">
                                         <div class="d-flex gap-1 justify-content-end">
                                             <a href="view.php?id=<?php echo $product['id']; ?>" 
                                                class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 

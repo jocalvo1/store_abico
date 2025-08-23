@@ -30,9 +30,7 @@ $salesArray = !empty($searchTerm)
 
 <div class="container-fluid py-4 sales-page">
     <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
-        <div class="row">
-            <h1 class="h3 mb-0 mt-2">Sales Transactions</h1>
-        </div>
+        <h1 class="h3 mb-0 mt-2">Sales Transactions</h1>
         <div class="d-flex align-items-center">
             <form action="" method="get" class="me-3 min-width-300px">
                 <div class="input-group input-group-sm">
@@ -191,7 +189,7 @@ $salesArray = !empty($searchTerm)
                                     </span>
                                 </td>
                                 <td class="text-end pe-3 text-nowrap d-none d-md-table-cell" style="width:1%">
-                                    <div class="btn-group btn-group-sm" role="group" aria-label="Actions">
+                                    <div class="d-flex gap-1 justify-content-end" role="group" aria-label="Actions">
                                         <?php if ($sale['status'] === 'debt' || $sale['status'] === 'partial'): ?>
                                         <?php 
                                           $isDebt = ($sale['status'] === 'debt');

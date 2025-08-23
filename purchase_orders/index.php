@@ -70,9 +70,7 @@ $conn->close();
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
-        <div class="row">
-            <h1 class="h3 mb-0 mt-2">Purchase Orders</h1>
-        </div>
+        <h1 class="h3 mb-0 mt-2">Purchase Orders</h1>
         <div class="d-flex align-items-center">
             <form action="" method="get" class="me-3 min-width-300px">
                 <div class="input-group input-group-sm">
@@ -192,6 +190,16 @@ $conn->close();
                                                 <span class="badge bg-<?php echo $status_class; ?> bg-opacity-10 text-<?php echo $status_class; ?> border border-<?php echo $status_class; ?> border-opacity-25">
                                                     <?php echo ucfirst($status_value ?: 'pending'); ?>
                                                 </span>
+                                            </div>
+                                            <div class="mt-2 d-flex flex-wrap gap-2">
+                                                <a href="view.php?id=<?php echo $purchase['id']; ?>" 
+                                                   class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                                    <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                                </a>
+                                                <a href="edit.php?id=<?php echo $purchase['id']; ?>" 
+                                                   class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                                                    <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                                </a>
                                             </div>
                                         </div>
                                     </td>

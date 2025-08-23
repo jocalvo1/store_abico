@@ -62,7 +62,7 @@ $conn->close();
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
         <h1 class="h3 mb-0 mt-2">Deliveries</h1>
-        <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
+        <a href="add.php" class="btn btn-primary btn-sm">
             <i class="fas fa-plus me-1"></i> Add New
         </a>
     </div>
@@ -92,6 +92,10 @@ $conn->close();
                     <input type="date" class="form-control" name="to" value="<?php echo htmlspecialchars($dateTo); ?>">
                 </div>
                 <div class="col-12 mt-2">
+                    <?php $qs = http_build_query(['search' => $search, 'status' => $status, 'from' => $dateFrom, 'to' => $dateTo]); ?>
+                    <a class="btn btn-success me-2" href="export.php?<?php echo $qs; ?>">
+                        <i class="fas fa-file-csv me-1"></i> Export CSV
+                    </a>
                     <button class="btn btn-primary">Filter</button>
                     <a class="btn btn-outline-secondary" href="index.php">Reset</a>
                 </div>
@@ -148,14 +152,14 @@ $conn->close();
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p d-none d-md-table-cell">#</th>
                                 <th class="text-uppercase text-muted small fw-bold">PO #</th>
-                                <th class="text-uppercase text-muted small fw-bold">Supplier</th>
-                                <th class="text-uppercase text-muted small fw-bold">Date Delivered</th>
-                                <th class="text-uppercase text-muted small fw-bold">Items</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Supplier</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Date Delivered</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-lg-table-cell">Items</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end">Value</th>
-                                <th class="text-uppercase text-muted small fw-bold">Status</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Status</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3 d-none d-md-table-cell">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -167,23 +171,66 @@ $conn->close();
                                 ][$delivery['status']] ?? 'secondary';
                             ?>
                                 <tr class="border-top" data-aos="fade-up" data-aos-delay="<?php echo ($index % 10) * 50; ?>">
-                                    <td class="text-center text-muted"><?php echo $delivery['id']; ?></td>
+                                    <td class="text-center text-muted d-none d-md-table-cell"><?php echo $delivery['id']; ?></td>
                                     <td>
                                         <a href="../purchase_orders/view.php?id=<?php echo $delivery['purchase_order_id']; ?>" 
-                                           class="text-decoration-none fw-medium">
+                                           class="text-decoration-none fw-medium d-inline-block text-truncate" style="max-width: 70vw;">
                                             <?php echo htmlspecialchars($delivery['po_number']); ?>
                                         </a>
+                                        <!-- Mobile-only details -->
+                                        <div class="d-md-none small text-muted mt-1">
+                                            <div>
+                                                <i class="fas fa-industry me-1"></i>
+                                                <a href="../ledger/suppliers/view.php?id=<?php echo $delivery['supplier_id']; ?>" class="text-decoration-none">
+                                                    <?php echo htmlspecialchars($delivery['supplier_name']); ?>
+                                                </a>
+                                            </div>
+                                            <div class="mt-1"><i class="far fa-calendar-alt me-1"></i><?php echo date('M d, Y', strtotime($delivery['delivery_date'])); ?></div>
+                                            <?php 
+                                            $itemsTitle = htmlspecialchars($delivery['items_list'] ?? 'No items');
+                                            $itemsText = 'No items';
+                                            if (!empty($delivery['items_list'])) {
+                                                $items = explode(', ', $delivery['items_list']);
+                                                $itemsText = (count($items) > 2)
+                                                    ? htmlspecialchars(implode(', ', array_slice($items, 0, 2)) . ' +' . (count($items) - 2) . ' more')
+                                                    : htmlspecialchars($delivery['items_list']);
+                                            }
+                                            ?>
+                                            <div class="mt-1" title="<?php echo $itemsTitle; ?>">
+                                                <i class="fas fa-boxes-stacked me-1"></i>
+                                                <span class="d-inline-block text-truncate" style="max-width: 70vw;"><?php echo $itemsText; ?></span>
+                                            </div>
+                                            <div class="mt-1 d-flex align-items-center gap-2">
+                                                <?php
+                                                $status_icon = [
+                                                    'pending' => 'clock',
+                                                    'delivered' => 'check-circle',
+                                                    'cancelled' => 'times-circle'
+                                                ][$delivery['status']] ?? 'question-circle';
+                                                ?>
+                                                <span class="badge bg-<?php echo $status_class; ?> bg-opacity-10 text-<?php echo $status_class; ?> border border-<?php echo $status_class; ?> border-opacity-25 px-2 py-1">
+                                                    <i class="fas fa-<?php echo $status_icon; ?> me-1"></i>
+                                                    <?php echo ucfirst($delivery['status']); ?>
+                                                </span>
+                                                <span class="badge bg-light text-dark">₱<?php echo number_format($delivery['total_value'] ?? 0, 2); ?></span>
+                                            </div>
+                                            <div class="mt-2 d-flex flex-wrap gap-2">
+                                                <a href="view.php?id=<?php echo $delivery['id']; ?>" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                                                    <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         <a href="../ledger/suppliers/view.php?id=<?php echo $delivery['supplier_id']; ?>" 
                                            class="text-decoration-none">
                                             <?php echo htmlspecialchars($delivery['supplier_name']); ?>
                                         </a>
                                     </td>
-                                    <td class="text-muted">
+                                    <td class="text-muted d-none d-md-table-cell">
                                         <?php echo date('M d, Y', strtotime($delivery['delivery_date'])); ?>
                                     </td>
-                                    <td class="text-muted" title="<?php echo htmlspecialchars($delivery['items_list'] ?? 'No items'); ?>">
+                                    <td class="text-muted d-none d-lg-table-cell" title="<?php echo htmlspecialchars($delivery['items_list'] ?? 'No items'); ?>">
                                         <?php 
                                         if (!empty($delivery['items_list'])) {
                                             $items = explode(', ', $delivery['items_list']);
@@ -200,7 +247,7 @@ $conn->close();
                                     <td class="text-end text-muted">
                                         ₱<?php echo number_format($delivery['total_value'] ?? 0, 2); ?>
                                     </td>
-                                    <td style="width: 150px;">
+                                    <td class="d-none d-md-table-cell" style="width: 150px;">
                                         <?php
                                         $status_icon = [
                                             'pending' => 'clock',
@@ -215,7 +262,7 @@ $conn->close();
                                             </span>
                                         </div>
                                     </td>
-                                    <td class="text-end pe-3" style="width: 200px;">
+                                    <td class="text-end pe-3 d-none d-md-table-cell" style="width: 200px;">
                                         <div class="d-flex gap-1 justify-content-end">
                                             <a href="view.php?id=<?php echo $delivery['id']; ?>" 
                                                class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 

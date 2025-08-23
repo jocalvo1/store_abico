@@ -55,9 +55,7 @@ $db->close();
 
 <div class="container-fluid py-4" id="saleSection">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-0">New Sale</h4>
-        </div>
+        <h4 class="mb-0 mt-2">New Sale</h4>
     </div>
 
     <?php if (!empty($errors)): ?>
