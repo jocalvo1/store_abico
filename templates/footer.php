@@ -19,6 +19,6 @@
         });
     }, 5000);
 </script>
-<script src="../assets/js/custom.js"></script>
+<script src="<?= url('assets/js/custom.js'); ?>"></script>
 </body>
 </html>

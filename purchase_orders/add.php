@@ -157,15 +157,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<div class="container-fluid">
+<div class="container-fluid pb-5">
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm mb-4" data-aos="fade-up">
                 <div class="card-header bg-white py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">New Purchase Order</h5>
-                        <a href="index.php" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-arrow-left me-1"></i> Back to List
+                        <a href="index.php" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 text-nowrap">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Back</span>
                         </a>
                     </div>
                 </div>
@@ -219,7 +220,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">Items</h6>
                                 <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
-                                    <i class="fas fa-plus me-1"></i> Add Item
+                                    <i class="fas fa-plus me-1"></i>
+                                    <span class="d-none d-sm-inline">Add Item</span>
+                                    <span class="d-inline d-sm-none">Add</span>
                                 </button>
                             </div>
                             <div class="card-body p-0">
@@ -245,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <?php else: ?>
                                                 <?php foreach ($purchase['items'] as $index => $item): ?>
                                                     <tr class="item-row">
-                                                        <td>
+                                                        <td data-label="Item">
                                                             <select class="form-select form-select-sm item-select" name="item_id[]" required>
                                                                 <option value="">-- Select Item --</option>
                                                                 <?php foreach ($items as $i): ?>
@@ -257,10 +260,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                 <?php endforeach; ?>
                                                             </select>
                                                         </td>
-                                                        <td>
+                                                        <td data-label="Quantity">
                                                             <div class="input-group input-group-sm">
                                                                 <input type="number" class="form-control quantity" name="quantity[]" 
-                                                                       min="0.01" step="0.01" value="<?php echo htmlspecialchars($item['quantity']); ?>" required>
+                                                                       min="0.01" step="0.01" inputmode="decimal" value="<?php echo htmlspecialchars($item['quantity']); ?>" required>
                                                                 <span class="input-group-text unit"><?php 
                                                                     $selected_item = array_filter($items, function($i) use ($item) {
                                                                         return $i['id'] == $item['item_id'];
@@ -269,14 +272,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                 ?></span>
                                                             </div>
                                                         </td>
-                                                        <td>
+                                                        <td data-label="Unit Price">
                                                             <div class="input-group input-group-sm">
                                                                 <span class="input-group-text">₱</span>
                                                                 <input type="number" class="form-control price" name="price[]" 
-                                                                       min="0" step="0.01" value="<?php echo htmlspecialchars($item['unit_price']); ?>" required>
+                                                                       min="0" step="0.01" inputmode="decimal" value="<?php echo htmlspecialchars($item['unit_price']); ?>" required>
                                                             </div>
                                                         </td>
-                                                        <td>
+                                                        <td data-label="Total">
                                                             <div class="input-group input-group-sm">
                                                                 <span class="input-group-text">₱</span>
                                                                 <input type="text" class="form-control total" 
@@ -314,7 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <i class="fas fa-times me-1"></i> Cancel
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-1"></i> Save Purchase Order
+                                <i class="fas fa-save me-1"></i> Save
                             </button>
                         </div>
                     </form>
@@ -327,7 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!-- Template for new item row -->
 <template id="itemRowTemplate">
     <tr class="item-row">
-        <td>
+        <td data-label="Item">
             <select class="form-select form-select-sm item-select" name="item_id[]" required>
                 <option value="">-- Select Item --</option>
                 <?php foreach ($items as $item): ?>
@@ -338,19 +341,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endforeach; ?>
             </select>
         </td>
-        <td>
+        <td data-label="Quantity">
             <div class="input-group input-group-sm">
-                <input type="number" class="form-control quantity" name="quantity[]" min="0.01" step="0.01" value="1" required>
+                <input type="number" class="form-control quantity" name="quantity[]" min="0.01" step="0.01" inputmode="decimal" value="1" required>
                 <span class="input-group-text unit">unit</span>
             </div>
         </td>
-        <td>
+        <td data-label="Unit Price">
             <div class="input-group input-group-sm">
                 <span class="input-group-text">₱</span>
-                <input type="number" class="form-control price" name="price[]" min="0" step="0.01" value="0.00" required>
+                <input type="number" class="form-control price" name="price[]" min="0" step="0.01" inputmode="decimal" value="0.00" required>
             </div>
         </td>
-        <td>
+        <td data-label="Total">
             <div class="input-group input-group-sm">
                 <span class="input-group-text">₱</span>
                 <input type="text" class="form-control total" value="0.00" readonly>
@@ -363,7 +366,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </td>
     </tr>
 </template>
-
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const itemsTbody = document.getElementById('itemsTbody');
@@ -424,9 +430,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantityInput = row.querySelector('.quantity');
         const priceInput = row.querySelector('.price');
         const removeBtn = row.querySelector('.remove-item');
+        // helper to reflect selected option text as tooltip on the select
+        function setSelectTitle(sel){
+            try {
+                if (!sel) return;
+                const opt = sel.options[sel.selectedIndex];
+                sel.title = opt && opt.text ? opt.text : '';
+            } catch(e) {}
+        }
         
         // Update unit when item is selected
         if (itemSelect) {
+            // set initial tooltip
+            setSelectTitle(itemSelect);
             itemSelect.addEventListener('change', function() {
                 const selectedOption = this.options[this.selectedIndex];
                 const selectedItemId = this.value;
@@ -457,6 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update item availability in all selects
                 updateItemAvailability();
                 calculateTotals();
+                setSelectTitle(this);
             });
         }
         
@@ -525,6 +542,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Calculate initial totals
     calculateTotals();
     
+    // No separate mobile add button; Add Item button is full-width on mobile
+
     // Form validation
     purchaseForm.addEventListener('submit', function(e) {
         // Check if at least one item is added
@@ -562,7 +581,41 @@ document.addEventListener('DOMContentLoaded', function() {
 .table th {
     white-space: nowrap;
 }
+/* Improve readability: give item column more room and allow horizontal scroll on small screens */
+#itemsTable th:nth-child(1),
+#itemsTable td:nth-child(1) {
+    min-width: 240px;
+}
+#itemsTable td:nth-child(2),
+#itemsTable td:nth-child(3) {
+    min-width: 130px;
+}
+#itemsTable td:nth-child(4) {
+    min-width: 120px;
+}
+.item-select {
+    font-size: 0.95rem;
+}
+/* Mobile table to stacked cards, consistent with edit.php */
+@media (max-width: 576px) {
+  #itemsTable thead,
+  #itemsTable tfoot { display: none; }
+  #itemsTable,
+  #itemsTable tbody,
+  #itemsTable tr,
+  #itemsTable td { display: block; width: 100%; }
+  #itemsTable tr { border-top: 1px solid #eee; padding: .5rem 0; margin: 0; }
+  #itemsTable td { padding: .5rem .75rem; display: flex; justify-content: space-between; align-items: center; gap: .75rem; }
+  #itemsTable td::before { content: attr(data-label); font-weight: 600; color: #6c757d; flex: 0 0 110px; max-width: 45%; white-space: nowrap; }
+  .item-row .input-group { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; }
+  .item-row .input-group .form-control { width: 1%; flex: 1 1 auto; min-width: 0; }
+  .item-row .input-group .input-group-text { white-space: nowrap; }
+  /* Make Add Item button full-width only on mobile */
+  #addItemBtn { width: 100% !important; }
+}
 </style>
+
+<!-- Removed separate mobile sticky action bar to match edit.php layout -->
 
 <?php 
 // Include footer

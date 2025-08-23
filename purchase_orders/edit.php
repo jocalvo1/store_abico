@@ -261,11 +261,13 @@ require_once __DIR__ . '/../templates/header.php';
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">Edit Purchase Order #<?php echo htmlspecialchars($purchase['po_number']); ?></h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-sm btn-outline-secondary me-2">
-                <i class="fas fa-arrow-left"></i> Back to View
+            <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-sm btn-outline-secondary me-2 d-inline-flex align-items-center gap-1 text-nowrap">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to View</span>
             </a>
-            <a href="index.php" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-list"></i> All Purchases
+            <a href="index.php" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 text-nowrap">
+                <i class="fas fa-list"></i>
+                <span>All Purchases</span>
             </a>
         </div>
     </div>
@@ -337,7 +339,7 @@ require_once __DIR__ . '/../templates/header.php';
                                 <tbody id="itemsTbody">
                                     <?php foreach ($purchase['items'] as $index => $item): ?>
                                         <tr class="item-row">
-                                            <td>
+                                            <td data-label="Item">
                                                 <input type="hidden" name="item_row_id[]" value="<?php echo $item['id']; ?>">
                                                 <select class="form-select item-select" name="item_id[]" required>
                                                     <option value="">Select Item</option>
@@ -350,7 +352,7 @@ require_once __DIR__ . '/../templates/header.php';
                                                     <?php endforeach; ?>
                                                 </select>
                                             </td>
-                                            <td>
+                                            <td data-label="Quantity">
                                                 <div class="input-group">
                                                     <input type="number" class="form-control quantity" 
                                                            name="quantity[]" min="0.01" step="0.01" 
@@ -358,7 +360,7 @@ require_once __DIR__ . '/../templates/header.php';
                                                     <span class="input-group-text unit"><?php echo htmlspecialchars($item['unit']); ?></span>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-label="Unit Price">
                                                 <div class="input-group">
                                                     <span class="input-group-text">₱</span>
                                                     <input type="number" class="form-control price" 
@@ -366,7 +368,7 @@ require_once __DIR__ . '/../templates/header.php';
                                                            value="<?php echo htmlspecialchars($item['unit_price']); ?>" required>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-label="Total">
                                                 <div class="input-group">
                                                     <span class="input-group-text">₱</span>
                                                     <input type="text" class="form-control total" 
@@ -410,7 +412,7 @@ require_once __DIR__ . '/../templates/header.php';
             <!-- Template for new item row -->
             <template id="itemRowTemplate">
                 <tr class="item-row">
-                    <td>
+                    <td data-label="Item">
                         <input type="hidden" name="item_row_id[]" value="0">
                         <select class="form-select item-select" name="item_id[]" required>
                             <option value="">Select Item</option>
@@ -422,19 +424,19 @@ require_once __DIR__ . '/../templates/header.php';
                             <?php endforeach; ?>
                         </select>
                     </td>
-                    <td>
+                    <td data-label="Quantity">
                         <div class="input-group">
                             <input type="number" class="form-control quantity" name="quantity[]" min="0.01" step="0.01" required>
                             <span class="input-group-text unit">unit</span>
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Unit Price">
                         <div class="input-group">
                             <span class="input-group-text">₱</span>
                             <input type="number" class="form-control price" name="price[]" min="0" step="0.01" required>
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Total">
                         <div class="input-group">
                             <span class="input-group-text">₱</span>
                             <input type="text" class="form-control total" value="0.00" readonly>
@@ -447,7 +449,6 @@ require_once __DIR__ . '/../templates/header.php';
                     </td>
                 </tr>
             </template>
-
             <style>
             .item-row td {
                 vertical-align: middle;
@@ -461,176 +462,230 @@ require_once __DIR__ . '/../templates/header.php';
                 background-position: right calc(0.375em + 0.1875rem) center;
                 background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
             }
+            /* Mobile table to stacked cards */
+            @media (max-width: 576px) {
+                #itemsTable thead,
+                #itemsTable tfoot {
+                    display: none;
+                }
+                #itemsTable,
+                #itemsTable tbody,
+                #itemsTable tr,
+                #itemsTable td {
+                    display: block;
+                    width: 100%;
+                }
+                #itemsTable tr {
+                    border-top: 1px solid #eee;
+                    padding: .5rem 0;
+                    margin: 0;
+                }
+                #itemsTable td {
+                    padding: .5rem .75rem;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: .75rem;
+                }
+                #itemsTable td::before {
+                    content: attr(data-label);
+                    font-weight: 600;
+                    color: #6c757d;
+                    flex: 0 0 110px; /* reserve space for label to reduce squeezing */
+                    max-width: 45%;
+                    white-space: nowrap;
+                }
+                /* Make inputs fill available width inside stacked rows */
+                .item-row .input-group {
+                    flex: 1 1 auto;
+                    min-width: 0;
+                    flex-wrap: nowrap; /* keep input and addon on one line */
+                }
+                .item-row .input-group .form-control {
+                    width: 1%;
+                    flex: 1 1 auto;
+                    min-width: 0;
+                }
+                .item-row .input-group .input-group-text {
+                    white-space: nowrap;
+                }
+                /* Make Add Item button full-width at top */
+                #addItemBtn {
+                    width: 100% !important;
+                }
+            }
             </style>
-
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const itemsTbody = document.getElementById('itemsTbody');
-                const addItemBtn = document.getElementById('addItemBtn');
-                const itemRowTemplate = document.getElementById('itemRowTemplate');
-                const grandTotalInput = document.getElementById('grandTotal');
-                
-                function getSelectedItemIds() {
-                    const ids = [];
-                    document.querySelectorAll('.item-row .item-select').forEach(sel => {
-                        if (sel.value) ids.push(sel.value);
-                    });
-                    return ids;
-                }
-                
-                function updateSelectOptions() {
-                    const selected = getSelectedItemIds();
-                    document.querySelectorAll('.item-row .item-select').forEach(sel => {
-                        const current = sel.value;
-                        Array.from(sel.options).forEach(opt => {
-                            if (!opt.value) return; // skip placeholder
-                            // disable if selected elsewhere, but keep enabled for the row that currently uses it
-                            opt.disabled = selected.includes(opt.value) && opt.value !== current;
-                        });
-                    });
-                }
-                
-                // Add new item row
-                addItemBtn.addEventListener('click', function() {
-                    const newRow = itemRowTemplate.content.cloneNode(true);
-                    itemsTbody.appendChild(newRow);
-                    
-                    // Initialize the new row
-                    const newRowElement = itemsTbody.lastElementChild;
-                    initializeRow(newRowElement);
-                    
-                    // Focus on the item select
-                    newRowElement.querySelector('.item-select').focus();
-                    updateSelectOptions();
-                });
-                
-                // Initialize existing rows
-                document.querySelectorAll('.item-row').forEach(row => {
-                    initializeRow(row);
-                });
-                updateSelectOptions();
-                
-                // Initialize a row with event listeners
-                function initializeRow(row) {
-                    const itemSelect = row.querySelector('.item-select');
-                    const unitSpan = row.querySelector('.unit');
-                    const quantityInput = row.querySelector('.quantity');
-                    const priceInput = row.querySelector('.price');
-                    const totalInput = row.querySelector('.total');
-                    const removeBtn = row.querySelector('.remove-item');
-                    
-                    // Update unit when item changes
-                    itemSelect.addEventListener('change', function() {
-                        const selectedOption = this.options[this.selectedIndex];
-                        const unit = selectedOption.dataset.unit || 'unit';
-                        unitSpan.textContent = unit;
-                        calculateRowTotal(row);
-                        calculateGrandTotal();
-                        updateSelectOptions();
-                        // Simple duplicate warning
-                        const currentVal = this.value;
-                        if (currentVal) {
-                            let count = 0;
-                            document.querySelectorAll('.item-row .item-select').forEach(s => {
-                                if (s.value === currentVal) count++;
-                            });
-                            if (count > 1) {
-                                this.classList.add('is-invalid');
-                            } else {
-                                this.classList.remove('is-invalid');
-                            }
-                        } else {
-                            this.classList.remove('is-invalid');
-                        }
-                    });
-                    
-                    // Calculate total when quantity or price changes
-                    quantityInput.addEventListener('input', () => calculateRowTotal(row));
-                    priceInput.addEventListener('input', () => calculateRowTotal(row));
-                    
-                    // Remove row
-                    removeBtn.addEventListener('click', function() {
-                        row.remove();
-                        calculateGrandTotal();
-                        updateSelectOptions();
-                    });
-                }
-                
-                // Calculate total for a single row
-                function calculateRowTotal(row) {
-                    const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-                    const price = parseFloat(row.querySelector('.price').value) || 0;
-                    const total = (quantity * price).toFixed(2);
-                    row.querySelector('.total').value = total;
-                    return parseFloat(total);
-                }
-                
-                // Calculate grand total
-                function calculateGrandTotal() {
-                    let grandTotal = 0;
-                    
-                    document.querySelectorAll('.item-row').forEach(row => {
-                        grandTotal += calculateRowTotal(row);
-                    });
-                    
-                    grandTotalInput.value = grandTotal.toFixed(2);
-                }
-                
-                // Handle form submission
-                document.getElementById('purchaseForm').addEventListener('submit', function(e) {
-                    // Validate at least one item exists
-                    if (document.querySelectorAll('.item-row').length === 0) {
-                        e.preventDefault();
-                        alert('Please add at least one item to the purchase order.');
-                        return false;
-                    }
-                    
-                    // Validate all items have a selected item
-                    let isValid = true;
-                    document.querySelectorAll('.item-select').forEach(select => {
-                        if (!select.value) {
-                            isValid = false;
-                            select.classList.add('is-invalid');
-                        } else {
-                            select.classList.remove('is-invalid');
-                        }
-                    });
-                    
-                    // Prevent duplicate items
-                    if (isValid) {
-                        const seen = new Set();
-                        let duplicateFound = false;
-                        document.querySelectorAll('.item-select').forEach(select => {
-                            const v = select.value;
-                            if (!v) return;
-                            if (seen.has(v)) {
-                                duplicateFound = true;
-                                select.classList.add('is-invalid');
-                            } else {
-                                seen.add(v);
-                            }
-                        });
-                        if (duplicateFound) {
-                            e.preventDefault();
-                            alert('Each item can only be added once. Please remove duplicates.');
-                            return false;
-                        }
-                    }
-                    
-                    if (!isValid) {
-                        e.preventDefault();
-                        alert('Please select an item for all rows.');
-                        return false;
-                    }
-                    
-                    return true;
-                });
-            });
-            </script>
         </div>
     </div>
 </div>
-
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const itemsTbody = document.getElementById('itemsTbody');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const itemRowTemplate = document.getElementById('itemRowTemplate');
+        const grandTotalInput = document.getElementById('grandTotal');
+        
+        function getSelectedItemIds() {
+            const ids = [];
+            document.querySelectorAll('.item-row .item-select').forEach(sel => {
+                if (sel.value) ids.push(sel.value);
+            });
+            return ids;
+        }
+        
+        function updateSelectOptions() {
+            const selected = getSelectedItemIds();
+            document.querySelectorAll('.item-row .item-select').forEach(sel => {
+                const current = sel.value;
+                Array.from(sel.options).forEach(opt => {
+                    if (!opt.value) return; // skip placeholder
+                    // disable if selected elsewhere, but keep enabled for the row that currently uses it
+                    opt.disabled = selected.includes(opt.value) && opt.value !== current;
+                });
+            });
+        }
+        
+        // Add new item row
+        addItemBtn.addEventListener('click', function() {
+            const newRow = itemRowTemplate.content.cloneNode(true);
+            itemsTbody.appendChild(newRow);
+            
+            // Initialize the new row
+            const newRowElement = itemsTbody.lastElementChild;
+            initializeRow(newRowElement);
+            
+            // Focus on the item select
+            newRowElement.querySelector('.item-select').focus();
+            updateSelectOptions();
+        });
+        
+        // Initialize existing rows
+        document.querySelectorAll('.item-row').forEach(row => {
+            initializeRow(row);
+        });
+        updateSelectOptions();
+        
+        // Initialize a row with event listeners
+        function initializeRow(row) {
+            const itemSelect = row.querySelector('.item-select');
+            const unitSpan = row.querySelector('.unit');
+            const quantityInput = row.querySelector('.quantity');
+            const priceInput = row.querySelector('.price');
+            const totalInput = row.querySelector('.total');
+            const removeBtn = row.querySelector('.remove-item');
+            
+            // Update unit when item changes
+            itemSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const unit = selectedOption.dataset.unit || 'unit';
+                unitSpan.textContent = unit;
+                calculateRowTotal(row);
+                calculateGrandTotal();
+                updateSelectOptions();
+                // Simple duplicate warning
+                const currentVal = this.value;
+                if (currentVal) {
+                    let count = 0;
+                    document.querySelectorAll('.item-row .item-select').forEach(s => {
+                        if (s.value === currentVal) count++;
+                    });
+                    if (count > 1) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            });
+            
+            // Calculate total when quantity or price changes
+            quantityInput.addEventListener('input', () => calculateRowTotal(row));
+            priceInput.addEventListener('input', () => calculateRowTotal(row));
+            
+            // Remove row
+            removeBtn.addEventListener('click', function() {
+                row.remove();
+                calculateGrandTotal();
+                updateSelectOptions();
+            });
+        }
+        
+        // Calculate total for a single row
+        function calculateRowTotal(row) {
+            const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+            const price = parseFloat(row.querySelector('.price').value) || 0;
+            const total = (quantity * price).toFixed(2);
+            row.querySelector('.total').value = total;
+            return parseFloat(total);
+        }
+        
+        // Calculate grand total
+        function calculateGrandTotal() {
+            let grandTotal = 0;
+            
+            document.querySelectorAll('.item-row').forEach(row => {
+                grandTotal += calculateRowTotal(row);
+            });
+            
+            grandTotalInput.value = grandTotal.toFixed(2);
+        }
+        
+        // Handle form submission
+        document.getElementById('purchaseForm').addEventListener('submit', function(e) {
+            // Validate at least one item exists
+            if (document.querySelectorAll('.item-row').length === 0) {
+                e.preventDefault();
+                alert('Please add at least one item to the purchase order.');
+                return false;
+            }
+            
+            // Validate all items have a selected item
+            let isValid = true;
+            document.querySelectorAll('.item-select').forEach(select => {
+                if (!select.value) {
+                    isValid = false;
+                    select.classList.add('is-invalid');
+                } else {
+                    select.classList.remove('is-invalid');
+                }
+            });
+            
+            // Prevent duplicate items
+            if (isValid) {
+                const seen = new Set();
+                let duplicateFound = false;
+                document.querySelectorAll('.item-select').forEach(select => {
+                    const v = select.value;
+                    if (!v) return;
+                    if (seen.has(v)) {
+                        duplicateFound = true;
+                        select.classList.add('is-invalid');
+                    } else {
+                        seen.add(v);
+                    }
+                });
+                if (duplicateFound) {
+                    e.preventDefault();
+                    alert('Each item can only be added once. Please remove duplicates.');
+                    return false;
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please select an item for all rows.');
+                return false;
+            }
+            
+            return true;
+        });
+    });
+</script>
 <?php 
 // Include footer
 require_once __DIR__ . '/../templates/footer.php'; 

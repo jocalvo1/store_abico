@@ -92,6 +92,11 @@ $conn->close();
                     <?php endif; ?>
                 </div>
             </form>
+            <a href="export.php<?php echo $search !== '' ? ('?search=' . urlencode($search)) : ''; ?>" 
+               class="btn btn-success btn-sm d-flex align-items-center me-2" title="Export to CSV" aria-label="Export to CSV">
+                <i class="fas fa-file-excel me-1"></i>
+                <span>Export CSV</span>
+            </a>
             <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
                 <i class="fas fa-plus me-1"></i> New Order
             </a>
@@ -149,15 +154,15 @@ $conn->close();
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p d-none d-sm-table-cell">#</th>
                                 <th class="text-uppercase text-muted small fw-bold">PO #</th>
                                 <th class="text-uppercase text-muted small fw-bold">Supplier</th>
-                                <th class="text-uppercase text-muted small fw-bold">Date Ordered</th>
-                                <th class="text-uppercase text-muted small fw-bold">Items</th>
-                                <th class="text-uppercase text-muted small fw-bold text-center">Deliveries</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Date Ordered</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-lg-table-cell">Items</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center d-none d-md-table-cell">Deliveries</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end">Total</th>
-                                <th class="text-uppercase text-muted small fw-bold text-center">Status</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center d-none d-sm-table-cell">Status</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3 d-none d-md-table-cell">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -170,21 +175,35 @@ $conn->close();
                                 ][$status_value] ?? 'warning';
                             ?>
                                 <tr class="border-top" data-aos="fade-up" data-aos-delay="<?php echo ($index % 10) * 50; ?>">
-                                    <td class="text-center text-muted"><?php echo $index + 1; ?></td>
+                                    <td class="text-center text-muted d-none d-sm-table-cell"><?php echo $index + 1; ?></td>
                                     <td class="py-3">
                                         <a href="view.php?id=<?php echo $purchase['id']; ?>" class="text-decoration-none fw-medium">
                                             <?php echo htmlspecialchars($purchase['po_number']); ?>
                                         </a>
+                                        <!-- Mobile-only details -->
+                                        <div class="d-md-none small text-muted mt-1">
+                                            <div>
+                                                <i class="far fa-calendar-alt me-1"></i><?php echo date('M j, Y', strtotime($purchase['created_at'])); ?>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 mt-1">
+                                                <span class="badge rounded-pill bg-<?php echo $purchase['delivery_count'] > 0 ? 'info' : 'light text-muted'; ?>">
+                                                    <i class="fas fa-truck me-1"></i><?php echo $purchase['delivery_count']; ?>
+                                                </span>
+                                                <span class="badge bg-<?php echo $status_class; ?> bg-opacity-10 text-<?php echo $status_class; ?> border border-<?php echo $status_class; ?> border-opacity-25">
+                                                    <?php echo ucfirst($status_value ?: 'pending'); ?>
+                                                </span>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
-                                        <a href="../suppliers/view.php?id=<?php echo $purchase['supplier_id']; ?>" class="text-decoration-none">
+                                        <a href="../ledger/suppliers/view.php?id=<?php echo $purchase['supplier_id']; ?>" class="text-decoration-none">
                                             <?php echo htmlspecialchars($purchase['supplier_name']); ?>
                                         </a>
                                     </td>
-                                    <td class="text-muted small">
+                                    <td class="text-muted small d-none d-md-table-cell">
                                         <?php echo date('M j, Y', strtotime($purchase['created_at'])); ?>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-lg-table-cell">
                                         <?php if (!empty($purchase['item_details'])): ?>
                                             <div class="text-truncate" style="max-width: 200px;" data-bs-toggle="tooltip" title="<?php echo htmlspecialchars(strip_tags($purchase['item_details'])); ?>">
                                                 <?php echo $purchase['item_details']; ?>
@@ -196,7 +215,7 @@ $conn->close();
                                             <span class="text-muted small">No items</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center d-none d-md-table-cell">
                                         <span class="badge rounded-pill bg-<?php echo $purchase['delivery_count'] > 0 ? 'info' : 'light text-muted'; ?> px-3 py-1">
                                             <i class="fas fa-truck me-1"></i><?php echo $purchase['delivery_count']; ?>
                                         </span>
@@ -204,7 +223,7 @@ $conn->close();
                                     <td class="fw-medium text-end">
                                         ₱<?php echo number_format($purchase['total_amount'], 2); ?>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center d-none d-sm-table-cell">
                                         <?php
                                         $status_icon = [
                                             'pending' => 'clock',
@@ -216,17 +235,17 @@ $conn->close();
                                             <?php echo ucfirst($status_value ?: 'pending'); ?>
                                         </span>
                                     </td>
-                                    <td class="text-end pe-3">
+                                    <td class="text-end pe-3 d-none d-md-table-cell">
                                         <div class="d-flex gap-1 justify-content-end">
                                             <a href="view.php?id=<?php echo $purchase['id']; ?>" 
                                                class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 
                                                title="View Details" data-bs-toggle="tooltip" data-bs-placement="top">
-                                                <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                                <i class="fas fa-eye fa-xs"></i><span class="d-none d-lg-inline">View</span>
                                             </a>
                                             <a href="edit.php?id=<?php echo $purchase['id']; ?>" 
                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1" 
                                                title="Edit Purchase Order" data-bs-toggle="tooltip" data-bs-placement="top">
-                                                <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                                <i class="fas fa-edit fa-xs"></i><span class="d-none d-lg-inline">Edit</span>
                                             </a>
 
                                         </div>
@@ -239,10 +258,11 @@ $conn->close();
             <?php endif; ?>
         </div>
     </div>
-
-
 </div>
-
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips

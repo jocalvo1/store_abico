@@ -212,12 +212,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_delivery'])) {
 require_once __DIR__ . '/../templates/header.php';
 ?>
 
+<style>
+/* Mobile stacked layout for delivery items table */
+@media (max-width: 576px) {
+  #itemsTable thead,
+  #itemsTable tfoot { display: none; }
+
+  #itemsTable,
+  #itemsTable tbody,
+  #itemsTable tr,
+  #itemsTable td { display: block; width: 100%; }
+
+  #itemsTable tr { border-bottom: 1px solid #e9ecef; padding: .75rem .75rem .25rem; }
+
+  #itemsTable td { 
+    border: 0 !important; 
+    padding: .25rem 0 !important; 
+  }
+
+  #itemsTable td[data-label] { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    gap: .5rem; 
+  }
+
+  #itemsTable td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6c757d;
+  }
+
+  /* Ensure the first cell (Item) shows as a block with name then details */
+  #itemsTable td[data-label="Item"] { display: block; }
+  #itemsTable td[data-label="Item"]::before { content: none; }
+
+  /* Keep input group on one line */
+  #itemsTable .input-group { flex-wrap: nowrap; }
+}
+</style>
+
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Create Delivery</h1>
         <div>
-            <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Purchase Order
+            <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 text-nowrap">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Purchase Order</span>
             </a>
         </div>
     </div>
@@ -335,7 +376,7 @@ require_once __DIR__ . '/../templates/header.php';
                                             $total += $line_total;
                                         ?>
                                             <tr>
-                                                <td>
+                                                <td data-label="Item">
                                                     <div class="fw-semibold d-flex align-items-center gap-2">
                                                         <span><?php echo htmlspecialchars($item['item_name']); ?></span>
                                                         <span class="badge bg-light text-muted border" title="Unit">
@@ -347,16 +388,16 @@ require_once __DIR__ . '/../templates/header.php';
                                                     <?php endif; ?>
                                                     <input type="hidden" name="item_ids[]" value="<?php echo $item['id']; ?>">
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Ordered">
                                                     <?php echo number_format($item['ordered_quantity']); ?>
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Delivered">
                                                     <?php echo number_format($item['delivered_quantity']); ?>
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Remaining">
                                                     <?php echo number_format($item['remaining_quantity']); ?>
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Quantity to Deliver">
                                                     <div class="input-group input-group-sm">
                                                         <input type="number" 
                                                             class="form-control form-control-sm quantity-input" 
@@ -372,10 +413,10 @@ require_once __DIR__ . '/../templates/header.php';
                                                     </div>
                                                     <div class="invalid-feedback d-block d-none">Exceeds remaining quantity</div>
                                                 </td>
-                                                <td class="align-middle">
+                                                <td class="align-middle" data-label="Unit Price">
                                                     ₱<?php echo number_format($item['unit_price'], 2); ?>
                                                 </td>
-                                                <td class="align-middle text-end line-total">
+                                                <td class="align-middle text-end line-total" data-label="Total">
                                                     ₱<span class="line-total-amount"><?php echo number_format($line_total, 2); ?></span>
                                                 </td>
                                             </tr>
@@ -393,9 +434,10 @@ require_once __DIR__ . '/../templates/header.php';
                 </div>
                 <?php endif; ?>
                 
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
-                    <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-outline-secondary me-md-2">
-                        <i class="fas fa-arrow-left"></i> Back to Purchase Order
+                <div class="d-grid justify-content-center gap-2 d-md-flex justify-content-md-end mb-4">
+                    <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-outline-secondary me-md-2 d-inline-flex align-items-center gap-1 text-nowrap">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Back to Purchase Order</span>
                     </a>
                     <?php if (!empty($po_items)): ?>
                         <button type="submit" name="save_delivery" class="btn btn-primary">
@@ -407,7 +449,10 @@ require_once __DIR__ . '/../templates/header.php';
         </form>
     <?php endif; ?>
 </div>
-
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <script>
 // Add JavaScript for dynamic calculations and validation
 document.addEventListener('DOMContentLoaded', function() {
