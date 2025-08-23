@@ -43,6 +43,11 @@ $salesArray = !empty($searchTerm)
                            placeholder="Search sales..." value="<?php echo htmlspecialchars($searchTerm); ?>">
                 </div>
             </form>
+            <a href="export.php<?php echo $searchTerm !== '' ? ('?search=' . urlencode($searchTerm)) : ''; ?>" 
+               class="btn btn-success btn-sm me-2" title="Export to CSV" aria-label="Export to CSV">
+                <i class="fas fa-file-excel me-1"></i>
+                <span>Export CSV</span>
+            </a>
             <a href="add.php" class="btn btn-primary btn-sm" title="New Sale" aria-label="New Sale">
                 <i class="fas fa-plus me-1"></i>
                 <span>New Sale</span>
