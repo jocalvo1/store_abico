@@ -125,9 +125,9 @@ $stmt = $conn->prepare("
            d.received_by as received_by_name,
            (SELECT GROUP_CONCAT(
                 CONCAT(
-                    '<div class=\'d-flex justify-content-between\'>',
-                    '<span class=\'text-nowrap\'>', i.name, '</span>',
-                    '<span class=\'ms-2 text-muted\'>', 
+                    '<div class=\'d-flex justify-content-between align-items-start\'>',
+                    '<span class=\'flex-grow-1 me-2\' style=\'min-width:0; white-space: normal; word-break: normal; overflow-wrap: break-word; flex-basis: 75%;\'>', i.name, '</span>',
+                    '<span class=\'ms-2 text-muted text-nowrap flex-shrink-0\'>', 
                         CAST(COALESCE(CASE WHEN d2.status = 'completed' THEN di.received_quantity ELSE di.quantity END, 0) AS UNSIGNED), ' <small>', REPLACE(i.unit, ' ', ''), '</small>',
                     '</span>',
                     '</div>'
@@ -176,7 +176,7 @@ $conn->close();
 require_once __DIR__ . '/../templates/header.php';
 ?>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 pb-5">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
         <h1 class="h3">
             Purchase Order #<?php echo htmlspecialchars($purchase['po_number']); ?>
@@ -198,7 +198,7 @@ require_once __DIR__ . '/../templates/header.php';
                 </a>
             </div>
             <a href="index.php" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to List
+                <i class="fas fa-arrow-left"></i> Back
             </a>
         </div>
     </div>
@@ -268,7 +268,24 @@ require_once __DIR__ . '/../templates/header.php';
                         
                         <?php if (!empty($purchase['notes'])): ?>
                             <dt class="col-sm-4">Notes</dt>
-                            <dd class="col-sm-8"><?php echo nl2br(htmlspecialchars($purchase['notes'])); ?></dd>
+                            <dd class="col-sm-8">
+                                <!-- Inline on md+ -->
+                                <div class="d-none d-md-block">
+                                    <?php echo nl2br(htmlspecialchars($purchase['notes'])); ?>
+                                </div>
+                                <!-- Button + modal on mobile -->
+                                <div class="d-block d-md-none">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm js-view-note d-inline-flex align-items-center gap-1 text-nowrap"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#noteModal"
+                                            data-title="Purchase Notes"
+                                            data-content="<?php echo htmlspecialchars(trim($purchase['notes']), ENT_QUOTES, 'UTF-8'); ?>">
+                                        <i class="fas fa-sticky-note"></i>
+                                        <span>View Notes</span>
+                                    </button>
+                                </div>
+                            </dd>
                         <?php endif; ?>
                     </dl>
                 </div>
@@ -290,7 +307,6 @@ require_once __DIR__ . '/../templates/header.php';
                                 <tr>
                                     <th>Item</th>
                                     <th class="text-end">Quantity</th>
-                                    <th class="text-end">Delivered</th>
                                     <th class="text-end">Unit Price</th>
                                     <th class="text-end">Total</th>
                                 </tr>
@@ -314,7 +330,8 @@ require_once __DIR__ . '/../templates/header.php';
                                     ?>
                                         <tr>
                                             <td>
-                                                <div class="fw-medium"><?php echo htmlspecialchars($item['item_name']); ?></div>
+                                                <?php $nm = htmlspecialchars($item['item_name']); ?>
+                                                <div class="fw-medium text-truncate" style="max-width: 65vw;" title="<?php echo $nm; ?>"><?php echo $nm; ?></div>
                                                 <?php if ($completion > 0): ?>
                                                     <div class="progress mt-1" style="height: 5px;">
                                                         <div class="progress-bar bg-<?php echo $status_class; ?>" 
@@ -334,22 +351,6 @@ require_once __DIR__ . '/../templates/header.php';
                                                 <?php echo number_format($item['quantity'], 0); ?>
                                                 <span class="text-muted"><?php echo preg_replace('/\s+/', '', $item['unit']); ?></span>
                                             </td>
-                                            <td class="text-end">
-                                                <?php 
-                                                    $received = (int)$item['total_received'];
-                                                    $total = (int)$item['quantity'];
-                                                    $is_fully_received = ($received >= $total);
-                                                ?>
-                                                <?php if ($is_fully_received): ?>
-                                                    <span class="text-success">
-                                                        <i class="fas fa-check-circle"></i>
-                                                    </span>
-                                                <?php endif; ?>
-                                                <span class="<?php echo $received > 0 ? 'text-primary' : 'text-muted'; ?>">
-                                                    <?php echo number_format($received, 0); ?>
-                                                </span>
-                                                <span class="text-muted">/ <?php echo number_format($total, 0); ?></span>
-                                            </td>
                                             <td class="text-end">₱<?php echo number_format($item['unit_price'], 2); ?></td>
                                             <td class="text-end fw-bold">
                                                 ₱<?php 
@@ -358,12 +359,12 @@ require_once __DIR__ . '/../templates/header.php';
                                                 ?>
                                             </td>
                                         </tr>
-                                    <?php endforeach; ?>
+                                <?php endforeach; ?>
                                 <?php endif; ?>
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th colspan="4" class="text-end">Total Amount:</th>
+                                    <th colspan="3" class="text-end">Total Amount:</th>
                                     <th class="text-end">
                                         ₱<?php echo number_format($purchase['total_amount'], 2); ?>
                                     </th>
@@ -376,17 +377,19 @@ require_once __DIR__ . '/../templates/header.php';
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">Delivery History</h6>
-            <div>
-                <span class="badge bg-secondary me-2">
+    <div class="card border-0 shadow-sm" id="delivery-history-card">
+        <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="mb-0">Delivery History</h6>
+                <span class="badge bg-secondary">
                     <?php echo count($deliveries); ?> <?php echo count($deliveries) === 1 ? 'Delivery' : 'Deliveries'; ?>
                 </span>
-                <a href="create_delivery.php?purchase_id=<?php echo $purchase_id; ?>" class="btn btn-sm btn-primary">
-                    <i class="fas fa-plus me-1"></i> New Delivery
-                </a>
             </div>
+            <a href="create_delivery.php?purchase_id=<?php echo $purchase_id; ?>" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                <span class="d-none d-sm-inline">New Delivery</span>
+                <span class="d-inline d-sm-none">New</span>
+            </a>
         </div>
         <div class="card-body p-0">
             <?php if (empty($deliveries)): ?>
@@ -394,7 +397,9 @@ require_once __DIR__ . '/../templates/header.php';
                     <i class="fas fa-truck fa-2x mb-3 text-muted"></i>
                     <p class="mb-3">No deliveries recorded for this purchase order.</p>
                     <a href="create_delivery.php?purchase_id=<?php echo $purchase_id; ?>" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> Create First Delivery
+                        <i class="fas fa-plus me-1"></i>
+                        <span class="d-none d-sm-inline">Create First Delivery</span>
+                        <span class="d-inline d-sm-none">Create</span>
                     </a>
                 </div>
             <?php else: ?>
@@ -414,6 +419,7 @@ require_once __DIR__ . '/../templates/header.php';
                         </thead>
                         <tbody>
                             <?php 
+                            $delivery_counter = 1;
                             foreach ($deliveries as $delivery): 
                                 $status_class = [
                                     'pending' => 'warning',
@@ -422,7 +428,7 @@ require_once __DIR__ . '/../templates/header.php';
                                 ][$delivery['status']] ?? 'secondary';
                             ?>
                                 <tr>
-                                    <td><?php echo $delivery['id']; ?></td>
+                                    <td><?php echo $delivery_counter++; ?></td>
                                     <td><?php echo date('M d, Y', strtotime($delivery['delivery_date'])); ?></td>
                                     <td>
                                         <span class="badge bg-<?php echo $status_class; ?>">
@@ -441,15 +447,42 @@ require_once __DIR__ . '/../templates/header.php';
                                         <?php endif; ?>
                                     </td>
                                     <td class="align-middle small" style="white-space: normal; word-break: break-word;">
-                                        <?php if (!empty($delivery['cancel_reason'])): ?>
-                                            <?php $cr = trim(preg_replace('/\s+/', ' ', $delivery['cancel_reason'])); ?>
-                                            <span class="text-danger"><?php echo htmlspecialchars($cr); ?></span>
-                                        <?php elseif (!empty($delivery['confirm_notes'])): ?>
-                                            <?php $cn = trim(preg_replace('/\s+/', ' ', $delivery['confirm_notes'])); ?>
-                                            <?php echo htmlspecialchars($cn); ?>
-                                        <?php else: ?>
-                                            <span class="text-muted">—</span>
-                                        <?php endif; ?>
+                                        <?php
+                                            $noteText = '';
+                                            if (!empty($delivery['cancel_reason'])) {
+                                                $noteText = trim(preg_replace('/\s+/', ' ', $delivery['cancel_reason']));
+                                            } elseif (!empty($delivery['confirm_notes'])) {
+                                                $noteText = trim(preg_replace('/\s+/', ' ', $delivery['confirm_notes']));
+                                            }
+                                        ?>
+                                        <!-- Inline text for md+ -->
+                                        <div class="d-none d-md-block">
+                                            <?php if ($noteText !== ''): ?>
+                                                <?php if (!empty($delivery['cancel_reason'])): ?>
+                                                    <span class="text-danger"><?php echo htmlspecialchars($noteText); ?></span>
+                                                <?php else: ?>
+                                                    <?php echo htmlspecialchars($noteText); ?>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-muted">—</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <!-- Button + modal on mobile -->
+                                        <div class="d-block d-md-none">
+                                            <?php if ($noteText !== ''): ?>
+                                                <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm js-view-note d-inline-flex align-items-center gap-1 text-nowrap"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#noteModal"
+                                                        data-title="Delivery Notes"
+                                                        data-content="<?php echo htmlspecialchars($noteText, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <i class="fas fa-sticky-note"></i>
+                                                    <span>Notes</span>
+                                                </button>
+                                            <?php else: ?>
+                                                <span class="text-muted">—</span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td class="text-end">
                                         <a href="../deliveries/view.php?id=<?php echo $delivery['id']; ?>" 
@@ -467,7 +500,29 @@ require_once __DIR__ . '/../templates/header.php';
         </div>
     </div>
 </div>
+<!-- Notes Modal -->
+<div class="modal fade" id="noteModal" tabindex="-1" aria-labelledby="noteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="noteModalLabel">Notes</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="noteModalContent" class="mb-0" style="white-space: pre-wrap; word-wrap: break-word;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+  </div>
 
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.js-view-note').forEach(btn => {
