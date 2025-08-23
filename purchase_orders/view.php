@@ -407,7 +407,7 @@ require_once __DIR__ . '/../templates/header.php';
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Delivery #</th>
+                                <th>#</th>
                                 <th>Delivery Date</th>
                                 <th>Status</th>
                                 <th>Delivered By</th>
