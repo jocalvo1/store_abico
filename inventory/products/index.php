@@ -226,7 +226,11 @@ unset($_SESSION['success'], $_SESSION['error']);
         </div>
     </div>
 </div>
-
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <?php
 // Include footer
 require_once __DIR__ . '/../../templates/footer.php';
