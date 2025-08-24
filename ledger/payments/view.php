@@ -111,7 +111,12 @@ require_once __DIR__ . '/../../templates/header.php';
             <table class="table align-middle mb-0">
               <thead class="bg-light">
                 <tr>
-                  <th>Sale #</th><th>Date</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Remaining</th><th class="text-end">Action</th>
+                  <th>Sale #</th>
+                  <th class="d-none d-sm-table-cell">Date</th>
+                  <th class="text-end">Amount</th>
+                  <th class="text-end d-none d-md-table-cell">Paid</th>
+                  <th class="text-end d-none d-sm-table-cell">Remaining</th>
+                  <th class="text-end d-none d-sm-table-cell">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,12 +124,26 @@ require_once __DIR__ . '/../../templates/header.php';
                   <tr><td colspan="6" class="text-center py-4 text-muted">No outstanding debts</td></tr>
                 <?php else: foreach ($outstanding as $r): ?>
                   <tr>
-                    <td>#<?php echo str_pad($r['sale_id'], 6, '0', STR_PAD_LEFT); ?></td>
-                    <td class="small text-muted"><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($r['transaction_date']))); ?></td>
+                    <td class="py-3">
+                      #<?php echo str_pad($r['sale_id'], 6, '0', STR_PAD_LEFT); ?>
+                      <!-- Mobile-only stacked details -->
+                      <div class="d-sm-none small text-muted mt-1">
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                          <span><i class="far fa-calendar-alt me-1"></i><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($r['transaction_date']))); ?></span>
+                          <span class="badge bg-light text-dark">Amt: ₱<?php echo number_format((float)$r['total_amount'], 2); ?></span>
+                          <span class="badge bg-light text-dark">Paid: ₱<?php echo number_format((float)$r['amount_paid'], 2); ?></span>
+                          <span class="badge bg-danger">Rem: ₱<?php echo number_format(max(0.0,(float)$r['remaining']), 2); ?></span>
+                        </div>
+                        <div class="mt-2">
+                          <a href="../../sales/payment.php?sale_id=<?php echo (int)$r['sale_id']; ?>" class="btn btn-sm btn-success">Record Payment</a>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="small text-muted d-none d-sm-table-cell"><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($r['transaction_date']))); ?></td>
                     <td class="text-end">₱<?php echo number_format((float)$r['total_amount'], 2); ?></td>
-                    <td class="text-end text-muted">₱<?php echo number_format((float)$r['amount_paid'], 2); ?></td>
-                    <td class="text-end fw-bold text-danger">₱<?php echo number_format(max(0.0,(float)$r['remaining']), 2); ?></td>
-                    <td class="text-end">
+                    <td class="text-end text-muted d-none d-md-table-cell">₱<?php echo number_format((float)$r['amount_paid'], 2); ?></td>
+                    <td class="text-end fw-bold text-danger d-none d-sm-table-cell">₱<?php echo number_format(max(0.0,(float)$r['remaining']), 2); ?></td>
+                    <td class="text-end d-none d-sm-table-cell">
                       <a href="../../sales/payment.php?sale_id=<?php echo (int)$r['sale_id']; ?>" class="btn btn-sm btn-success">Record Payment</a>
                     </td>
                   </tr>
@@ -147,7 +166,11 @@ require_once __DIR__ . '/../../templates/header.php';
             <table class="table align-middle mb-0">
               <thead class="bg-light">
                 <tr>
-                  <th>Sale #</th><th>Paid At</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Action</th>
+                  <th>Sale #</th>
+                  <th class="d-none d-sm-table-cell">Paid At</th>
+                  <th class="text-end">Amount</th>
+                  <th class="text-end d-none d-md-table-cell">Paid</th>
+                  <th class="text-end d-none d-sm-table-cell">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -155,11 +178,24 @@ require_once __DIR__ . '/../../templates/header.php';
                   <tr><td colspan="5" class="text-center py-4 text-muted">No paid debts</td></tr>
                 <?php else: foreach ($paid as $r): ?>
                   <tr>
-                    <td>#<?php echo str_pad($r['sale_id'], 6, '0', STR_PAD_LEFT); ?></td>
-                    <td class="small text-muted"><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($r['paid_at']))); ?></td>
+                    <td class="py-3">
+                      #<?php echo str_pad($r['sale_id'], 6, '0', STR_PAD_LEFT); ?>
+                      <!-- Mobile-only stacked details -->
+                      <div class="d-sm-none small text-muted mt-1">
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                          <span><i class="far fa-calendar-check me-1"></i><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($r['paid_at']))); ?></span>
+                          <span class="badge bg-light text-dark">Amt: ₱<?php echo number_format((float)$r['total_amount'], 2); ?></span>
+                          <span class="badge bg-success">Paid: ₱<?php echo number_format((float)$r['amount_paid'], 2); ?></span>
+                        </div>
+                        <div class="mt-2">
+                          <a href="../../sales/view.php?id=<?php echo (int)$r['sale_id']; ?>" class="btn btn-sm btn-outline-secondary">View Sale</a>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="small text-muted d-none d-sm-table-cell"><?php echo htmlspecialchars(date('M d, Y h:i A', strtotime($r['paid_at']))); ?></td>
                     <td class="text-end">₱<?php echo number_format((float)$r['total_amount'], 2); ?></td>
-                    <td class="text-end text-success">₱<?php echo number_format((float)$r['amount_paid'], 2); ?></td>
-                    <td class="text-end">
+                    <td class="text-end text-success d-none d-md-table-cell">₱<?php echo number_format((float)$r['amount_paid'], 2); ?></td>
+                    <td class="text-end d-none d-sm-table-cell">
                       <a href="../../sales/view.php?id=<?php echo (int)$r['sale_id']; ?>" class="btn btn-sm btn-outline-secondary">View Sale</a>
                     </td>
                   </tr>
@@ -172,7 +208,11 @@ require_once __DIR__ . '/../../templates/header.php';
     </div>
   </div>
 </div>
-
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <?php 
 // Include footer
 require_once __DIR__ . '/../../templates/footer.php';
