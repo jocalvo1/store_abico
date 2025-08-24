@@ -74,8 +74,24 @@ if ($stmt) {
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h4 mb-0">Stock Movements</h1>
-        <div class="text-muted small"><?php echo count($rows); ?> records</div>
+        <div>
+            <h1 class="h4 mb-0">Stock Movements</h1>
+            <div class="text-muted small"><?php echo count($rows); ?> records</div>
+        </div>
+        <div>
+            <a class="btn btn-sm btn-success"
+               href="export.php<?php 
+                    $q=[]; 
+                    if($search!=='') $q['search']=$search; 
+                    if($type!=='') $q['type']=$type; 
+                    if($dateFrom!=='') $q['from']=$dateFrom; 
+                    if($dateTo!=='') $q['to']=$dateTo; 
+                    echo $q ? ('?'.http_build_query($q)) : ''; 
+                ?>"
+            >
+                <i class="fas fa-file-excel me-1"></i> Export CSV
+            </a>
+        </div>
     </div>
 
     <div class="card border-0 shadow-sm mb-4">
@@ -102,7 +118,7 @@ if ($stmt) {
                     <label class="form-label">To</label>
                     <input type="date" class="form-control" name="to" value="<?php echo htmlspecialchars($dateTo); ?>">
                 </div>
-                <div class="col-12 mt-2">
+                <div class="col-12 mt-2 d-flex align-items-center gap-2">
                     <button class="btn btn-primary">Filter</button>
                     <a class="btn btn-outline-secondary" href="index.php">Reset</a>
                 </div>
@@ -110,18 +126,40 @@ if ($stmt) {
         </div>
     </div>
 
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <?php 
+            echo $_SESSION['success'];
+            unset($_SESSION['success']);
+            ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <?php 
+            echo $_SESSION['error'];
+            unset($_SESSION['error']);
+            ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
     <div class="card border-0 shadow-sm">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th class="ps-3">Date</th>
+                        <th class="ps-3 d-none d-md-table-cell">Date</th>
                         <th>Item</th>
-                        <th class="text-center">Type</th>
+                        <th class="text-center d-none d-md-table-cell">Type</th>
                         <th class="text-end">Quantity</th>
-                        <th class="text-center">Reference Type</th>
-                        <th class="text-center">Reference #</th>
-                        <th>Notes</th>
+                        <th class="text-center d-none d-lg-table-cell">Reference Type</th>
+                        <th class="text-center d-none d-md-table-cell">Reference #</th>
+                        <th class="d-none d-lg-table-cell">Notes</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -129,12 +167,47 @@ if ($stmt) {
                     <tr><td colspan="7" class="text-center py-4 text-muted">No stock movements found</td></tr>
                     <?php else: foreach ($rows as $mv): ?>
                     <tr>
-                        <td class="ps-3"><?php echo date('M d, Y h:i A', strtotime($mv['created_at'])); ?></td>
+                        <td class="ps-3 d-none d-md-table-cell"><?php echo date('M d, Y h:i A', strtotime($mv['created_at'])); ?></td>
                         <td>
-                            <div class="fw-medium"><?php echo htmlspecialchars($mv['item_name'] ?? ('#'.$mv['item_id'])); ?></div>
+                            <div class="fw-medium d-flex align-items-center gap-2">
+                                <span><?php echo htmlspecialchars($mv['item_name'] ?? ('#'.$mv['item_id'])); ?></span>
+                                <?php $mt = $mv['movement_type'] ?? ''; $mtCls = ($mt==='in') ? 'success' : 'danger'; ?>
+                                <span class="badge bg-<?php echo $mtCls; ?> text-uppercase d-md-none"><?php echo htmlspecialchars($mt ?: '-'); ?></span>
+                            </div>
                             <div class="small text-muted">Unit: <?php echo htmlspecialchars($mv['item_unit'] ?? ''); ?></div>
+                            <!-- Mobile-only details -->
+                            <div class="d-md-none small text-muted mt-1">
+                                <div class="d-flex flex-column gap-1">
+                                    <div>
+                                        <i class="far fa-clock me-1"></i>
+                                        <?php echo date('M d, Y h:i A', strtotime($mv['created_at'])); ?>
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-cubes me-1"></i>
+                                        <?php $sign = ($mv['movement_type']==='in') ? '+' : '-'; ?>
+                                        <span class="font-monospace"><?php echo $sign . number_format((float)$mv['quantity']); ?></span>
+                                    </div>
+                                    <div>
+                                        <?php $rt = $mv['reference_type'] ?? ''; $rtClass = ($rt==='sales') ? 'primary' : (($rt==='adjustment') ? 'warning' : (($rt==='delivery') ? 'info' : (($rt==='return') ? 'secondary' : 'secondary'))); ?>
+                                        <span class="badge bg-<?php echo $rtClass; ?> text-uppercase me-1"><?php echo htmlspecialchars($rt ?: '-'); ?></span>
+                                        <?php if ($mv['reference_type'] === 'sales' && $mv['reference_id']): ?>
+                                            <a href="../../sales/view.php?id=<?php echo (int)$mv['reference_id']; ?>" class="text-decoration-none">
+                                                #<?php echo str_pad((int)$mv['reference_id'], 6, '0', STR_PAD_LEFT); ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-muted small font-monospace"><?php echo $mv['reference_id'] ? '#'.(int)$mv['reference_id'] : '-'; ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if (!empty($mv['notes'])): ?>
+                                    <div class="text-truncate" style="max-width: 95vw;">
+                                        <i class="far fa-sticky-note me-1"></i>
+                                        <?php echo htmlspecialchars($mv['notes']); ?>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center d-none d-md-table-cell">
                             <span class="badge bg-<?php echo $mv['movement_type']==='in'?'success':'danger'; ?> text-uppercase">
                                 <?php echo htmlspecialchars($mv['movement_type']); ?>
                             </span>
@@ -145,11 +218,11 @@ if ($stmt) {
                                 <?php echo $sign . number_format((float)$mv['quantity']); ?>
                             </span>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center d-none d-lg-table-cell">
                             <?php $rt = $mv['reference_type'] ?? ''; $rtClass = ($rt==='sales') ? 'primary' : (($rt==='adjustment') ? 'warning' : (($rt==='delivery') ? 'info' : (($rt==='return') ? 'secondary' : 'secondary'))); ?>
                             <span class="badge bg-<?php echo $rtClass; ?> text-uppercase"><?php echo htmlspecialchars($rt ?: '-'); ?></span>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center d-none d-md-table-cell">
                             <?php if ($mv['reference_type'] === 'sales' && $mv['reference_id']): ?>
                                 <a href="../../sales/view.php?id=<?php echo (int)$mv['reference_id']; ?>" class="text-decoration-none">
                                     #<?php echo str_pad((int)$mv['reference_id'], 6, '0', STR_PAD_LEFT); ?>
@@ -158,7 +231,7 @@ if ($stmt) {
                                 <span class="text-muted small font-monospace"><?php echo $mv['reference_id'] ? '#'.(int)$mv['reference_id'] : '-'; ?></span>
                             <?php endif; ?>
                         </td>
-                        <td class="small">
+                        <td class="small d-none d-lg-table-cell">
                             <?php $fullNotes = $mv['notes'] ?? ''; ?>
                             <span class="d-inline-block text-truncate" style="max-width: 420px;" title="<?php echo htmlspecialchars($fullNotes); ?>">
                                 <?php echo htmlspecialchars($fullNotes); ?>
@@ -171,7 +244,11 @@ if ($stmt) {
         </div>
     </div>
 </div>
-
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <?php 
 // Include footer
 require_once __DIR__ . '/../../templates/footer.php'; 
