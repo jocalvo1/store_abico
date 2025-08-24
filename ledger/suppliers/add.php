@@ -202,7 +202,11 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 </div>
-
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <?php 
 // Close database connection
 if (isset($conn)) {

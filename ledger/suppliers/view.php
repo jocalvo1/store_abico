@@ -243,8 +243,8 @@ require_once __DIR__ . '/../../templates/header.php';
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Purchase Orders</h6>
-                <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/add.php?supplier_id=' . $supplier_id; ?>" class="btn btn-sm btn-primary">
-                    <i class="fas fa-plus me-1"></i> New Purchase Order
+                <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/add.php?supplier_id=' . $supplier_id; ?>" class="btn btn-sm btn-primary text-nowrap" aria-label="New Purchase Order">
+                    <i class="fas fa-plus me-1"></i><span class="d-inline d-sm-none">New</span><span class="d-none d-sm-inline">New Purchase Order</span>
                 </a>
             </div>
             <div class="card-body p-0">
@@ -258,28 +258,62 @@ require_once __DIR__ . '/../../templates/header.php';
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 align-middle">
                             <thead class="bg-light">
                                 <tr>
                                     <th>PO #</th>
-                                    <th>Date</th>
+                                    <th class="d-none d-sm-table-cell">Date</th>
                                     <th class="text-end">Amount</th>
-                                    <th>Status</th>
-                                    <th>Items</th>
-                                    <th class="text-end">Actions</th>
+                                    <th class="d-none d-md-table-cell">Status</th>
+                                    <th class="d-none d-lg-table-cell">Items</th>
+                                    <th class="text-end d-none d-sm-table-cell">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($purchases as $po): ?>
                                     <tr>
-                                        <td>
-                                            <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/view.php?id=' . $po['id']; ?>" class="text-decoration-none">
+                                        <td class="py-3">
+                                            <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/view.php?id=' . $po['id']; ?>" class="text-decoration-none fw-medium">
                                                 <?php echo htmlspecialchars($po['po_number']); ?>
                                             </a>
+                                            <!-- Mobile-only stacked details -->
+                                            <div class="d-sm-none small text-muted mt-1">
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <span class="badge bg-light text-dark"><i class="fas fa-calendar-alt me-1"></i><?php echo date('M d, Y', strtotime($po['order_date'])); ?></span>
+                                                    <?php
+                                                    $rawStatus = isset($po['status']) ? strtolower(trim($po['status'])) : '';
+                                                    $normalizedStatus = in_array($rawStatus, ['pending','completed'], true) ? $rawStatus : 'pending';
+                                                    $statusClass = [
+                                                        'pending' => 'bg-warning',
+                                                        'completed' => 'bg-success'
+                                                    ][$normalizedStatus];
+                                                    ?>
+                                                    <span class="badge <?php echo $statusClass; ?>"><?php echo ucfirst(htmlspecialchars($normalizedStatus)); ?></span>
+                                                </div>
+                                                <?php if (!empty($po['items'])): ?>
+                                                <div class="text-truncate mt-1" style="max-width: 240px;" title="<?php echo htmlspecialchars($po['items']); ?>">
+                                                    <i class="fas fa-box-open me-1"></i>
+                                                    <?php 
+                                                    $items = explode(', ', $po['items']);
+                                                    if (count($items) > 2) {
+                                                        echo htmlspecialchars($items[0] . ', ' . $items[1] . ' +' . (count($items) - 2) . ' more');
+                                                    } else {
+                                                        echo htmlspecialchars($po['items']);
+                                                    }
+                                                    ?>
+                                                </div>
+                                                <?php endif; ?>
+                                                <div class="mt-2">
+                                                    <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/view.php?id=' . $po['id']; ?>" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </a>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td><?php echo date('M d, Y', strtotime($po['order_date'])); ?></td>
-                                        <td class="text-end">₱<?php echo number_format($po['total_amount'], 2); ?></td>
-                                        <td>
+                                        <td class="d-none d-sm-table-cell"><?php echo date('M d, Y', strtotime($po['order_date'])); ?></td>
+                                        <td class="text-end fw-medium">₱<?php echo number_format($po['total_amount'], 2); ?></td>
+                                        <td class="d-none d-md-table-cell">
                                             <?php
                                             // Normalize status to match global mapping (pending/completed)
                                             $rawStatus = isset($po['status']) ? strtolower(trim($po['status'])) : '';
@@ -293,7 +327,7 @@ require_once __DIR__ . '/../../templates/header.php';
                                                 <?php echo ucfirst(htmlspecialchars($normalizedStatus)); ?>
                                             </span>
                                         </td>
-                                        <td title="<?php echo htmlspecialchars($po['items']); ?>">
+                                        <td class="d-none d-lg-table-cell" title="<?php echo htmlspecialchars($po['items']); ?>">
                                             <?php 
                                             $items = explode(', ', $po['items']);
                                             if (count($items) > 2) {
@@ -303,7 +337,7 @@ require_once __DIR__ . '/../../templates/header.php';
                                             }
                                             ?>
                                         </td>
-                                        <td class="text-end">
+                                        <td class="text-end d-none d-sm-table-cell">
                                             <a href="<?php echo dirname(dirname($_SERVER['PHP_SELF'])) . '/../purchase_orders/view.php?id=' . $po['id']; ?>" 
                                             class="btn btn-sm btn-outline-primary"
                                             title="View Details"
@@ -321,10 +355,11 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 </div>
-
-
-
-    
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <?php 
 // Include footer
 require_once __DIR__ . '/../../templates/footer.php'; 
