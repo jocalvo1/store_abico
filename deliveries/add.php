@@ -294,15 +294,35 @@ $conn->close();
                             <div class="row mb-3">
                                 <div class="col-md-12">
                                     <label for="po_id" class="form-label">Purchase Order <span class="text-danger">*</span></label>
+                                    <!-- Choices.js for improved select on mobile -->
+                                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+                                    <style>
+                                      @media (max-width: 576px) {
+                                        /* Ensure select text doesn't overflow viewport */
+                                        #po_id { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                                      }
+                                      /* Make Choices container full width and truncate text */
+                                      .choices { width: 100%; }
+                                      .choices__inner { min-height: 2.4rem; }
+                                      .choices__list--single .choices__item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                                      /* Prevent dropdown from exceeding viewport on mobile */
+                                      .choices__list--dropdown { max-width: 100vw; }
+                                      .choices__list--dropdown .choices__item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                                    </style>
+                                    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
                                     <select class="form-select" id="po_id" name="po_id" required>
                                         <option value="">-- Select Purchase Order --</option>
                                         <?php if (!empty($purchase_orders)): ?>
                                             <?php foreach ($purchase_orders as $po): ?>
-                                                <option value="<?php echo $po['id']; ?>" <?php echo (isset($_POST['po_id']) && $_POST['po_id'] == $po['id']) ? 'selected' : ''; ?>>
-                                                    PO#<?php echo htmlspecialchars($po['po_number']); ?> - 
-                                                    <?php echo htmlspecialchars($po['supplier_name']); ?> - 
-                                                    <?php echo date('M d, Y', strtotime($po['order_date'])); ?> 
-                                                    (<?php echo (int)$po['undelivered_items']; ?> item/s pending)
+                                                <?php
+                                                  $poNum = isset($po['po_number']) ? (string)$po['po_number'] : '';
+                                                  $supplierName = isset($po['supplier_name']) ? (string)$po['supplier_name'] : '';
+                                                  $orderDate = isset($po['order_date']) ? date('M d, Y', strtotime($po['order_date'])) : '';
+                                                  $pending = isset($po['undelivered_items']) ? (int)$po['undelivered_items'] : 0;
+                                                  $fullTitle = "PO#{$poNum} - {$supplierName} - {$orderDate} ({$pending} item/s pending)";
+                                                ?>
+                                                <option value="<?php echo $po['id']; ?>" title="<?php echo htmlspecialchars($fullTitle); ?>" <?php echo (isset($_POST['po_id']) && $_POST['po_id'] == $po['id']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($fullTitle); ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         <?php else: ?>
@@ -451,9 +471,70 @@ $conn->close();
         </div>
     </div>
 </div>
-
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Choices.js on PO select if available
+    (function(){
+        const el = document.getElementById('po_id');
+        if (el && window.Choices) {
+            try {
+                new Choices(el, {
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    shouldSort: false,
+                });
+            } catch (e) { /* no-op */ }
+        }
+    })();
+    // Dynamically truncate option labels based on available width for native selects
+    function shortenPOOptions() {
+        const select = document.getElementById('po_id');
+        if (!select) return;
+        // If Choices.js has enhanced this select, native option text is hidden; CSS already truncates
+        if (select.parentElement && select.parentElement.classList.contains('choices')) return;
+
+        // Compute available text width inside the select (subtract chevron/padding approx)
+        const avail = Math.max(0, select.clientWidth - 50);
+        if (avail === 0) return; // hidden or not laid out yet
+
+        // Prepare a canvas context to measure text width with the select's font
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const style = window.getComputedStyle(select);
+        ctx.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize} / ${style.lineHeight} ${style.fontFamily}`;
+
+        function fits(text) { return ctx.measureText(text).width <= avail; }
+        function ellipsize(text) {
+            if (fits(text)) return text;
+            const ell = '…';
+            let start = 0, end = text.length, best = '';
+            while (start <= end) {
+                const mid = Math.floor((start + end) / 2);
+                const candidate = text.slice(0, mid) + ell;
+                if (fits(candidate)) { best = candidate; start = mid + 1; } else { end = mid - 1; }
+            }
+            return best || ell;
+        }
+
+        Array.from(select.options).forEach(opt => {
+            if (opt.value === '') return; // skip placeholder
+            // Store original full label once (prefer title if present)
+            if (!opt.dataset.fullLabel) {
+                opt.dataset.fullLabel = opt.title || opt.text;
+            }
+            const full = opt.dataset.fullLabel;
+            // If it fits, show full; otherwise truncate with ellipsis
+            opt.text = fits(full) ? full : ellipsize(full);
+        });
+    }
+    shortenPOOptions();
+    window.addEventListener('resize', shortenPOOptions);
+    window.addEventListener('orientationchange', shortenPOOptions);
     // Function to calculate totals
     function calculateTotals() {
         let total = 0;
