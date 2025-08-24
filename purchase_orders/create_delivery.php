@@ -434,7 +434,7 @@ require_once __DIR__ . '/../templates/header.php';
                 </div>
                 <?php endif; ?>
                 
-                <div class="d-grid justify-content-center gap-2 d-md-flex justify-content-md-end mb-4">
+                <div class="d-flex w-100 justify-content-center justify-content-md-end flex-wrap gap-2 mb-4">
                     <a href="view.php?id=<?php echo $purchase_id; ?>" class="btn btn-outline-secondary me-md-2 d-inline-flex align-items-center gap-1 text-nowrap">
                         <i class="fas fa-arrow-left"></i>
                         <span>Back to Purchase Order</span>

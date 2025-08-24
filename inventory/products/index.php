@@ -66,11 +66,30 @@ unset($_SESSION['success'], $_SESSION['error']);
                     <?php endif; ?>
                 </div>
             </form>
+            <a href="export.php<?php echo $searchTerm !== '' ? ('?search=' . urlencode($searchTerm)) : ''; ?>" class="btn btn-sm btn-success d-flex align-items-center me-2" title="Download as CSV" data-bs-toggle="tooltip">
+                <i class="fas fa-file-excel me-1"></i> Export CSV
+            </a>
             <a href="add.php" class="btn btn-primary btn-sm d-flex align-items-center">
                 <i class="fas fa-plus me-1"></i> Add New
             </a>
         </div>
     </div>
+
+    <?php if (!empty($successMessage)): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <?php echo htmlspecialchars($successMessage); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($errorMessage)): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <?php echo htmlspecialchars($errorMessage); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
 
     <div class="card border-0 shadow-sm" data-aos="fade-up" data-aos-delay="100">
         <div class="card-header bg-white border-0 py-3">
@@ -101,14 +120,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-uppercase text-muted small fw-bold text-center width-1p">#</th>
+                                <th class="text-uppercase text-muted small fw-bold text-center width-1p d-none d-sm-table-cell">#</th>
                                 <th class="text-uppercase text-muted small fw-bold">Name</th>
-                                <th class="text-uppercase text-muted small fw-bold">Description</th>
-                                <th class="text-uppercase text-muted small fw-bold">Category</th>
-                                <th class="text-uppercase text-muted small fw-bold">Unit</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-lg-table-cell">Description</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Category</th>
+                                <th class="text-uppercase text-muted small fw-bold d-none d-md-table-cell">Unit</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end">Stock</th>
                                 <th class="text-uppercase text-muted small fw-bold text-end">Price</th>
-                                <th class="text-uppercase text-muted small fw-bold text-end pe-3">Actions</th>
+                                <th class="text-uppercase text-muted small fw-bold text-end pe-3 d-none d-md-table-cell">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -126,12 +145,38 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 }
                             ?>
                                 <tr>
-                                    <td class="text-center text-muted"><?php echo $rowNumber++; ?></td>
+                                    <td class="text-center text-muted d-none d-sm-table-cell"><?php echo $rowNumber++; ?></td>
                                     <td>
                                         <div class="fw-bold"><?php echo htmlspecialchars($product['name']); ?></div>
+                                        <!-- Mobile-only details -->
+                                        <div class="d-md-none small text-muted mt-1">
+                                            <div class="d-flex flex-column gap-1">
+                                                <div>
+                                                    <span class="badge bg-light text-dark me-1"><?php echo htmlspecialchars($product['category']); ?></span>
+                                                    <span class="text-muted">Unit: <?php echo htmlspecialchars($product['unit']); ?></span>
+                                                </div>
+                                                <?php if (!empty($product['description'])): ?>
+                                                <div class="text-truncate" style="max-width: 95vw;">
+                                                    <i class="far fa-sticky-note me-1"></i>
+                                                    <?php 
+                                                    $description = $product['description'];
+                                                    echo htmlspecialchars(mb_strimwidth($description, 0, 70, '...'));
+                                                    ?>
+                                                </div>
+                                                <?php endif; ?>
+                                                <div class="mt-1 d-flex flex-wrap gap-2">
+                                                    <a href="view.php?id=<?php echo $product['id']; ?>" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                                                        <i class="fas fa-eye fa-xs"></i><span>View</span>
+                                                    </a>
+                                                    <a href="edit.php?id=<?php echo $product['id']; ?>" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1">
+                                                        <i class="fas fa-edit fa-xs"></i><span>Edit</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
-                                    <td class="text-muted">
+                                    <td class="text-muted d-none d-lg-table-cell">
                                         <?php 
                                         $description = $product['description'];
                                         echo strlen($description) > 50 ? 
@@ -139,12 +184,12 @@ unset($_SESSION['success'], $_SESSION['error']);
                                             htmlspecialchars($description);
                                         ?>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         <span class="badge bg-light text-dark">
                                             <?php echo htmlspecialchars($product['category']); ?>
                                         </span>
                                     </td>
-                                    <td class="text-center text-muted"><?php echo htmlspecialchars($product['unit']); ?></td>
+                                    <td class="text-center text-muted d-none d-md-table-cell"><?php echo htmlspecialchars($product['unit']); ?></td>
                                     <td class="text-end">
                                         <span class="fw-bold <?php echo $stockClass; ?>">
                                             <?php echo number_format($stock, 0); ?>
@@ -158,7 +203,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                     <td class="text-end fw-bold">
                                         ₱<?php echo number_format($product['selling_price'], 2); ?>
                                     </td>
-                                    <td class="text-end pe-3">
+                                    <td class="text-end pe-3 d-none d-md-table-cell">
                                         <div class="d-flex gap-1 justify-content-end">
                                             <a href="view.php?id=<?php echo $product['id']; ?>" 
                                                class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-1" 
