@@ -255,11 +255,10 @@ require_once __DIR__ . '/../../templates/header.php';
                                 <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
                                     <tr>
                                         <th>Debt #</th>
-                                        <th class="text-end">Paid</th>
                                         <th class="text-end">Balance</th>
-                                        <th class="text-nowrap">Due</th>
-                                        <th>Status</th>
-                                        <th></th>
+                                        <th class="text-nowrap d-none d-sm-table-cell">Due</th>
+                                        <th class="d-none d-md-table-cell">Status</th>
+                                        <th class="d-none d-sm-table-cell text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -271,20 +270,55 @@ require_once __DIR__ . '/../../templates/header.php';
                                         $badge = $isOverdue ? 'danger' : ($d['status']==='partial' ? 'warning text-dark' : 'secondary');
                                     ?>
                                         <tr>
-                                            <td>#<?php echo (int)$d['id']; ?></td>
-                                            <td class="text-end" style="min-width:160px;">
-                                                <?php 
-                                                    $total = max(0.01, (float)($d['total_amount'] ?? 0));
-                                                    $paid = min($total, (float)($d['amount_paid'] ?? 0));
-                                                    $pct = (int)round(($paid / $total) * 100);
-                                                ?>
-                                                <div class="small text-muted">₱<?php echo number_format($paid,2); ?> / ₱<?php echo number_format($total,2); ?> (<?php echo $pct; ?>%)</div>
-                                                <div class="progress" style="height:6px;">
-                                                    <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $pct; ?>%" aria-valuenow="<?php echo $pct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                            <td class="py-3">#<?php echo (int)$d['id']; ?>
+                                                <!-- Mobile-only stacked details -->
+                                                <div class="d-sm-none small text-muted mt-1">
+                                                    <?php 
+                                                        $total = max(0.01, (float)($d['total_amount'] ?? 0));
+                                                        $paid = min($total, (float)($d['amount_paid'] ?? 0));
+                                                        $pct = (int)round(($paid / $total) * 100);
+                                                        $due = !empty($d['due_date']) ? new DateTime($d['due_date']) : null;
+                                                        $isOverdue = $due && $due < $today;
+                                                    ?>
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <div>
+                                                            <span class="me-2">Paid:</span>
+                                                            <span class="badge bg-light text-dark">₱<?php echo number_format($paid,2); ?> / ₱<?php echo number_format($total,2); ?> (<?php echo $pct; ?>%)</span>
+                                                            <div class="progress mt-1" style="height:4px; max-width:220px;">
+                                                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $pct; ?>%" aria-valuenow="<?php echo $pct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <span class="me-2">Balance:</span>
+                                                            <span class="badge bg-danger">₱<?php echo number_format((float)$d['balance_due'], 2); ?></span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="me-2">Due:</span>
+                                                            <span>
+                                                                <?php 
+                                                                    if ($due) {
+                                                                        $diffDays = (int)$today->diff($due)->format('%r%a');
+                                                                        echo $due->format('Y-m-d');
+                                                                        if ($diffDays < 0) { echo ' <span class="text-danger">('.abs($diffDays).'d overdue)</span>'; }
+                                                                        elseif ($diffDays > 0) { echo ' <span class="text-muted">(in '.$diffDays.'d)</span>'; }
+                                                                    } else { echo '—'; }
+                                                                ?>
+                                                                <?php if ($isOverdue): ?><span class="badge bg-danger ms-1">Overdue</span><?php endif; ?>
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="me-2">Status:</span>
+                                                            <span class="badge bg-<?php echo $badge; ?> text-uppercase"><?php echo htmlspecialchars($d['status']); ?></span>
+                                                        </div>
+                                                        <div class="mt-1 d-flex flex-wrap gap-2">
+                                                            <a class="btn btn-sm btn-outline-primary" href="../../sales/view.php?id=<?php echo (int)$d['sales_transaction_id']; ?>">View Sale</a>
+                                                            <a class="btn btn-sm btn-success" href="../../sales/payment.php?sale_id=<?php echo (int)$d['sales_transaction_id']; ?>">Settle</a>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td class="text-end">₱<?php echo number_format((float)$d['balance_due'], 2); ?></td>
-                                            <td class="text-nowrap">
+                                            <td class="text-nowrap d-none d-sm-table-cell">
                                                 <?php 
                                                     if ($due) {
                                                         $diffDays = (int)$today->diff($due)->format('%r%a');
@@ -295,8 +329,8 @@ require_once __DIR__ . '/../../templates/header.php';
                                                 ?>
                                                 <?php if ($isOverdue): ?><span class="badge bg-danger ms-1">Overdue</span><?php endif; ?>
                                             </td>
-                                            <td><span class="badge bg-<?php echo $badge; ?> text-uppercase"><?php echo htmlspecialchars($d['status']); ?></span></td>
-                                            <td class="text-end">
+                                            <td class="d-none d-md-table-cell"><span class="badge bg-<?php echo $badge; ?> text-uppercase"><?php echo htmlspecialchars($d['status']); ?></span></td>
+                                            <td class="text-end d-none d-sm-table-cell">
                                                 <a class="btn btn-sm btn-outline-primary" href="../../sales/view.php?id=<?php echo (int)$d['sales_transaction_id']; ?>">View Sale</a>
                                                 <a class="btn btn-sm btn-success ms-1" href="../../sales/payment.php?sale_id=<?php echo (int)$d['sales_transaction_id']; ?>">Settle</a>
                                             </td>
@@ -357,6 +391,11 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 </div>
+<!-- Back to Top Button -->
+<button type="button" id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="Back to top" title="Back to top">
+    <i class="fas fa-arrow-up"></i>
+    <span class="visually-hidden">Back to top</span>
+</button>
 <?php
 // Close DB connection
 if (isset($conn) && $conn instanceof mysqli) { $conn->close(); }

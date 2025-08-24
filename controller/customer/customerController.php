@@ -9,7 +9,17 @@ class customerController {
     }
 
     public function getAll() {
-        $query = "SELECT * FROM customers ORDER BY name ASC";
+        $query = "SELECT 
+                    c.*, 
+                    COALESCE(SUM(CASE WHEN sd.total_amount > sd.amount_paid THEN 1 ELSE 0 END), 0) AS open_invoices,
+                    COALESCE(SUM(GREATEST(sd.total_amount - sd.amount_paid, 0)), 0) AS total_remaining,
+                    MIN(CASE WHEN sd.total_amount > sd.amount_paid AND sd.due_date IS NOT NULL THEN sd.due_date END) AS next_due_date
+                  FROM customers c
+                  LEFT JOIN sales_debts sd 
+                    ON sd.customer_id = c.id 
+                   AND sd.status IN ('unpaid','partial')
+                  GROUP BY c.id
+                  ORDER BY c.name ASC";
         $result = $this->conn->query($query);
         return $result;
     }
@@ -35,7 +45,19 @@ class customerController {
 
     public function search($term) {
         $search = "%$term%";
-        $stmt = $this->conn->prepare("SELECT * FROM customers WHERE name LIKE ? OR contact LIKE ? OR address LIKE ? ORDER BY name ASC");
+        $sql = "SELECT 
+                    c.*, 
+                    COALESCE(SUM(CASE WHEN sd.total_amount > sd.amount_paid THEN 1 ELSE 0 END), 0) AS open_invoices,
+                    COALESCE(SUM(GREATEST(sd.total_amount - sd.amount_paid, 0)), 0) AS total_remaining,
+                    MIN(CASE WHEN sd.total_amount > sd.amount_paid AND sd.due_date IS NOT NULL THEN sd.due_date END) AS next_due_date
+                FROM customers c
+                LEFT JOIN sales_debts sd 
+                  ON sd.customer_id = c.id 
+                 AND sd.status IN ('unpaid','partial')
+                WHERE c.name LIKE ? OR c.contact LIKE ? OR c.address LIKE ?
+                GROUP BY c.id
+                ORDER BY c.name ASC";
+        $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("sss", $search, $search, $search);
         $stmt->execute();
         return $stmt->get_result();
