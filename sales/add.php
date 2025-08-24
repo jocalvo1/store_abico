@@ -78,7 +78,7 @@ $db->close();
 
     <form method="post" id="saleForm" action="../controller/sale/process.php">
         <input type="hidden" name="cart_json" id="cart_json" value="">
-        <div class="row g-4">
+        <div id="catalogSection" class="row g-4">
             <!-- LEFT COLUMN -->
             <div class="col-lg-8">
                 <!-- Customer Info -->
@@ -734,13 +734,14 @@ $db->close();
         function showOrderSummary() {
             const cart = loadCart();
             if (!cart.length) {
-                Swal.fire('Cart is empty', '', 'info');
+                if (window.Swal && Swal.fire) { Swal.fire('Cart is empty', '', 'info'); } else { alert('Cart is empty'); }
                 return;
             }
             // Fill hidden input for potential submit
             document.getElementById('cart_json').value = JSON.stringify(cart);
             // Toggle views
-            document.getElementById('saleSection').style.display = 'none';
+            const catalog = document.getElementById('catalogSection');
+            if (catalog) catalog.style.display = 'none';
             document.getElementById('orderSummarySection').style.display = 'block';
             renderSummary();
         }
@@ -751,7 +752,8 @@ $db->close();
         // Back to cart handler
         document.getElementById('backToCart').addEventListener('click', () => {
             document.getElementById('orderSummarySection').style.display = 'none';
-            document.getElementById('saleSection').style.display = 'block';
+            const catalog = document.getElementById('catalogSection');
+            if (catalog) catalog.style.display = 'block';
         });
 
         // Payment summary calculators
